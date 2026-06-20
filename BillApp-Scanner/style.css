@@ -1,0 +1,124 @@
+/* ==========================================
+   📸 BillApp-Scanner 專屬樣式 (style.css)
+   ========================================== */
+
+.dashboard-container { 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding-bottom: calc(env(safe-area-inset-bottom) + 20px); 
+}
+.top-section { 
+    margin-top: calc(env(safe-area-inset-top) + 20px); 
+    margin-bottom: 20px; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    width: 100%; 
+}
+
+/* Scanning 動畫 */
+.scanning svg { animation: spin 2s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* 圓環撥盤 (Dials) */
+.dials-row { 
+    display: flex; 
+    width: 100%; 
+    max-width: 380px; 
+    justify-content: space-around; 
+    padding: 0 10px; 
+    margin-bottom: 30px; 
+}
+.dial-container { display: flex; flex-direction: column; align-items: center; width: 100px; }
+.dial-title { 
+    color: var(--text-dim); 
+    font-size: 0.8rem; font-weight: 600; 
+    margin-bottom: 15px; 
+    text-transform: uppercase; letter-spacing: 1px; 
+}
+.dial-svg-wrapper { position: relative; width: 100%; aspect-ratio: 1; touch-action: none; }
+.dial-bg { fill: none; stroke: var(--track-color); stroke-width: 8; }
+.dial-progress { 
+    fill: none; stroke: var(--accent-blue); stroke-width: 8; stroke-linecap: round; 
+    transform-origin: 50% 50%; transform: rotate(135deg); 
+    transition: stroke-dashoffset 0.1s linear; 
+}
+.dial-thumb { 
+    fill: #fff; filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); 
+    transition: cx 0.1s linear, cy 0.1s linear; cursor: grab; 
+}
+.dial-thumb:active { cursor: grabbing; transform: scale(1.2); }
+.dial-center-text { 
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+    display: flex; justify-content: center; align-items: center; 
+    font-size: 1.4rem; font-weight: 700; color: #fff; pointer-events: none; 
+}
+
+/* 中央顯示球 (Result Orb) */
+.center-result-section { 
+    flex: 1; display: flex; justify-content: center; align-items: center; 
+    width: 100%; min-height: 200px; position: relative; z-index: 10; 
+}
+.result-orb { 
+    width: 280px; height: 280px; border-radius: 50%; 
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 50%, transparent 100%); 
+    border: 1px solid var(--panel-border); 
+    display: flex; flex-direction: column; justify-content: center; align-items: center; 
+    position: relative; overflow: hidden; 
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 40px rgba(125,211,252,0.1); 
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); 
+}
+.result-orb.inactive { transform: scale(0.9); opacity: 0.5; box-shadow: none; border-color: transparent; }
+.orb-glare { 
+    position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; 
+    background: linear-gradient(to bottom right, rgba(255,255,255,0.1) 0%, transparent 40%, transparent 100%); 
+    transform: rotate(30deg); pointer-events: none; 
+}
+.orb-content { text-align: center; z-index: 2; }
+.orb-label { 
+    font-size: 0.85rem; color: var(--accent-blue); font-weight: 700; 
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; 
+    display: block; text-shadow: 0 0 10px var(--accent-glow); 
+}
+.orb-amount { font-size: 4.5rem; font-weight: 800; color: #fff; line-height: 1; transition: font-size 0.3s ease; }
+
+/* 底部控制台 (Manual Panel) */
+.bottom-controls-row { width: 100%; padding: 0 20px; display: flex; flex-direction: column; gap: 15px; margin-top: auto; }
+.manual-panel .glass-box { padding: 15px 20px; border-radius: 24px; }
+.input-line { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
+.input-line label { color: var(--text-dim); font-weight: 600; font-size: 1rem; }
+.input-with-symbol { display: flex; align-items: center; gap: 2px; }
+.input-with-symbol span { color: var(--text-dim); font-size: 1.2rem; font-weight: 500; }
+.input-with-symbol input { 
+    background: transparent; border: none; color: #fff; 
+    font-size: 1.4rem; font-weight: 700; text-align: right; 
+    min-width: 60px; outline: none; 
+}
+.divider { height: 1px; background: var(--panel-border); margin: 8px 0; }
+.actions-panel { display: flex; gap: 15px; justify-content: center; }
+.action-wrapper { flex: 1; max-width: 150px; }
+.action-circle-btn { 
+    width: 100%; height: 60px; border-radius: 30px; 
+    display: flex; justify-content: center; align-items: center; 
+    border: 2px solid transparent; cursor: pointer; transition: transform 0.2s, opacity 0.2s; 
+    background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); 
+}
+.action-circle-btn:active { transform: scale(0.95); }
+.action-circle-btn.done-btn { background: var(--text-main); color: #000; }
+
+/* Scanner 裁切器 (Cropper UI) */
+.crop-hint { 
+    position: absolute; top: 40px; width: 100%; text-align: center; 
+    color: white; z-index: 201; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); 
+}
+.crop-container { width: 100%; height: calc(100% - 100px); max-height: 80vh; }
+.crop-container img { max-width: 100%; }
+.crop-actions { 
+    position: absolute; bottom: 30px; width: 100%; 
+    display: flex; justify-content: space-evenly; z-index: 201; 
+}
+.crop-btn { padding: 12px 30px; border-radius: 25px; font-weight: bold; font-size: 1rem; border: none; }
+.crop-btn.cancel { background: rgba(255,255,255,0.2); color: white; }
+.crop-btn.confirm { background: var(--accent-blue); color: black; }
