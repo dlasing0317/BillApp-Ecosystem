@@ -1,5 +1,5 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V38.0)
+// 🌟 FIREBASE SETUP & IMPORT (V38.1)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, arrayUnion, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -23,33 +23,22 @@ function showToast(msg) {
 }
 
 // ==========================================
-// 🌟 NOTIFICATIONS SYSTEM (V38.0 New)
+// 🌟 NOTIFICATIONS SYSTEM 
 // ==========================================
 window.currentUnreadNotifs = [];
 
 function setupNotifications() {
     const me = getCurrentUser(); if (me === 'Guest') return;
-    
-    // We avoid orderBy here to prevent forcing Firebase composite indexes for now. Sorting is done in JS.
     const q = query(collection(db, "notifications"), where("targetUser", "==", me));
     
     onSnapshot(q, (snapshot) => {
         const notifList = document.getElementById('notification-list');
         const badge = document.getElementById('notification-badge');
-        
-        let docsArr = [];
-        snapshot.forEach(d => docsArr.push({id: d.id, ...d.data()}));
-        // Sort descending locally
+        let docsArr = []; snapshot.forEach(d => docsArr.push({id: d.id, ...d.data()}));
         docsArr.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
         
-        notifList.innerHTML = '';
-        let unreadCount = 0;
-        window.currentUnreadNotifs = [];
-
-        if (docsArr.length === 0) {
-            notifList.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 20px;">No notifications yet.</div>';
-            badge.style.display = 'none'; return;
-        }
+        notifList.innerHTML = ''; let unreadCount = 0; window.currentUnreadNotifs = [];
+        if (docsArr.length === 0) { notifList.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 20px;">No notifications yet.</div>'; badge.style.display = 'none'; return; }
 
         docsArr.forEach(data => {
             if (!data.read) { unreadCount++; window.currentUnreadNotifs.push(data.id); }
@@ -62,7 +51,6 @@ function setupNotifications() {
 
         if (unreadCount > 0) {
             badge.style.display = 'flex'; badge.textContent = unreadCount;
-            // Optionally trigger toast for newest unread if it was just added in the last 10 seconds
             const latest = docsArr[0];
             if (!latest.read && (new Date() - new Date(latest.createdAt)) < 10000) { showToast(latest.message); }
         } else { badge.style.display = 'none'; }
@@ -71,14 +59,13 @@ function setupNotifications() {
 
 document.getElementById('btn-notifications').addEventListener('click', () => {
     document.getElementById('notifications-modal').classList.remove('hidden');
-    // Mark as read in Firebase
     window.currentUnreadNotifs.forEach(id => { updateDoc(doc(db, "notifications", id), { read: true }); });
     window.currentUnreadNotifs = []; document.getElementById('notification-badge').style.display = 'none';
 });
 document.getElementById('btn-notifications-close').addEventListener('click', () => { document.getElementById('notifications-modal').classList.add('hidden'); });
 
 // ==========================================
-// 🌟 FIREBASE TRIPS FETCHING
+// 🌟 FIREBASE TRIPS FETCHING (Case-Insensitive)
 // ==========================================
 function loadTrips() {
     const tripList = document.getElementById('trip-list-container'); const me = getCurrentUser();
@@ -88,9 +75,20 @@ function loadTrips() {
         tripList.innerHTML = ''; let hasTrips = false;
         if (snapshot.empty) { tripList.innerHTML = '<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">No Trips yet. Click + to create.</div>'; return; }
         
+        const lowerMe = me.toLowerCase().replace(/\s+/g, '');
+
         snapshot.forEach((docSnap) => {
-            const data = docSnap.data(); const tripOwner = data.owner || (data.members && data.members[0]) || 'Unknown'; 
-            if (tripOwner === me || (data.members && data.members.includes(me))) { renderTripCard(docSnap.id, data); hasTrips = true; }
+            const data = docSnap.data(); 
+            const tripOwner = data.owner || (data.members && data.members[0]) || 'Unknown'; 
+            
+            // 🛡️ Safe Case-Insensitive Matching
+            const isOwner = tripOwner.toLowerCase().replace(/\s+/g, '') === lowerMe;
+            let isMember = false;
+            if (data.members) {
+                isMember = data.members.some(m => m.toLowerCase().replace(/\s+/g, '') === lowerMe);
+            }
+
+            if (isOwner || isMember) { renderTripCard(docSnap.id, data); hasTrips = true; }
         });
         if (!hasTrips) tripList.innerHTML = `<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">You haven't joined any trips yet. Click the 🤝 icon to join.</div>`;
     }, (error) => { tripList.innerHTML = '<div style="text-align: center; color: #ff4444; margin-top: 20px;">Failed to load trips.</div>'; });
@@ -100,10 +98,15 @@ async function loadExpenses(tripId) {
     const timeline = document.getElementById('trip-timeline'); timeline.innerHTML = '<div class="glass-box" style="margin-bottom: 15px; opacity: 0.5;"><div style="text-align: center; color: var(--text-dim); font-size: 0.9rem;">Start of trip timeline</div></div>';
     try {
         const q = query(collection(db, `trips/${tripId}/expenses`), orderBy("createdAt", "desc")); const querySnapshot = await getDocs(q);
+        const me = getCurrentUser(); const lowerMe = me.toLowerCase().replace(/\s+/g, '');
+
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data(); const wrapper = document.createElement('div'); wrapper.className = 'trip-item-wrapper expense-wrapper';
             const actionBg = document.createElement('div'); actionBg.className = 'trip-item-action-bg';
-            const me = getCurrentUser(); const isTripOwner = currentTripData.owner === me || (currentTripData.members && currentTripData.members[0] === me); const isExpenseCreator = data.paidBy === me;
+            
+            // 🛡️ Safe Case-Insensitive Permissions
+            const isTripOwner = (currentTripData.owner && currentTripData.owner.toLowerCase().replace(/\s+/g, '') === lowerMe) || (currentTripData.members && currentTripData.members[0].toLowerCase().replace(/\s+/g, '') === lowerMe);
+            const isExpenseCreator = data.paidBy.toLowerCase().replace(/\s+/g, '') === lowerMe;
             
             if (isTripOwner || isExpenseCreator) {
                 actionBg.innerHTML = `<div class="action-edit">Edit</div><div class="action-delete">Delete</div>`;
@@ -125,8 +128,47 @@ async function loadExpenses(tripId) {
 }
 
 // ==========================================
-// 🌟 AUTO-MERGE & JOIN LOGIC
+// 🌟 AUTO-MERGE & JOIN LOGIC (Protected)
 // ==========================================
+async function processJoin(tripDocRef, tData, me, modalToClose) {
+    const existingMembers = tData.members || [];
+    const lowerMe = me.toLowerCase().replace(/\s+/g, '');
+    let exactMatch = false; let matchedName = null;
+
+    existingMembers.forEach(m => {
+        if (m === me) exactMatch = true;
+        else if (m.toLowerCase().replace(/\s+/g, '') === lowerMe) matchedName = m;
+    });
+
+    const confirmed = tData.confirmedMembers || [];
+    const isConfirmed = confirmed.includes(me);
+    let updatedMembers = [...existingMembers];
+
+    if (exactMatch) {
+        if (!isConfirmed) {
+            confirmed.push(me); await updateDoc(tripDocRef, { confirmedMembers: confirmed });
+            if (tData.owner && tData.owner !== me) { await addDoc(collection(db, "notifications"), { targetUser: tData.owner, message: `🎉 ${me} accepted your invite to "${tData.name}"!`, read: false, createdAt: new Date().toISOString() }); }
+        }
+        showNoticeModal('Already Joined', `You are already in "${tData.name}".`);
+    } else if (matchedName) {
+        // V38.1 Claim the slot without overriding local profile
+        updatedMembers = updatedMembers.map(m => m === matchedName ? me : m);
+        if (!isConfirmed) confirmed.push(me);
+        await updateDoc(tripDocRef, { members: updatedMembers, confirmedMembers: confirmed });
+        if (!isConfirmed && tData.owner && tData.owner !== me) { await addDoc(collection(db, "notifications"), { targetUser: tData.owner, message: `🎉 ${me} accepted your invite to "${tData.name}"!`, read: false, createdAt: new Date().toISOString() }); }
+        showNoticeModal('Success', `You joined "${tData.name}"!`);
+    } else {
+        updatedMembers.push(me);
+        if (!isConfirmed) confirmed.push(me);
+        await updateDoc(tripDocRef, { members: updatedMembers, confirmedMembers: confirmed });
+        if (!isConfirmed && tData.owner && tData.owner !== me) { await addDoc(collection(db, "notifications"), { targetUser: tData.owner, message: `🎉 ${me} joined your trip "${tData.name}"!`, read: false, createdAt: new Date().toISOString() }); }
+        showNoticeModal('Success', `You have successfully joined "${tData.name}"!`);
+    }
+
+    if (modalToClose) modalToClose.classList.add('hidden');
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+
 const joinModal = document.getElementById('join-trip-modal'); const btnOpenJoin = document.getElementById('btn-open-join'); const btnJoinCancel = document.getElementById('btn-join-cancel'); const btnJoinSubmit = document.getElementById('btn-join-submit'); const joinCodeInput = document.getElementById('join-code-input');
 
 btnOpenJoin.addEventListener('click', () => { const me = getCurrentUser(); if (me === 'Guest') { showNoticeModal('Profile Required', 'Please set your Name in settings first!'); return; } joinCodeInput.value = ''; joinModal.classList.remove('hidden'); });
@@ -140,23 +182,7 @@ btnJoinSubmit.addEventListener('click', async () => {
         if (!querySnapshot.empty) { tripDocRef = querySnapshot.docs[0].ref; tData = querySnapshot.docs[0].data(); }
         else { try { const docSnap = await getDoc(doc(db, "trips", inviteCode)); if (docSnap.exists()) { tripDocRef = docSnap.ref; tData = docSnap.data(); } } catch(err) { } }
 
-        if (tripDocRef && tData) {
-            const existingMembers = tData.members || []; const lowerMe = me.toLowerCase().replace(/\s+/g, ''); let matchedName = null;
-            existingMembers.forEach(m => { if (m.toLowerCase().replace(/\s+/g, '') === lowerMe) matchedName = m; });
-
-            if (matchedName) {
-                localStorage.setItem('billapp_user_name', matchedName); document.getElementById('settings-name-input').value = matchedName;
-                showNoticeModal('Welcome Back!', `You are recognized as "${matchedName}" in "${tData.name}".`);
-            } else {
-                await updateDoc(tripDocRef, { members: arrayUnion(me) });
-                // 🌟 WRITE NOTIFICATION TO FIREBASE
-                if (tData.owner && tData.owner !== me) {
-                    await addDoc(collection(db, "notifications"), { targetUser: tData.owner, message: `🎉 ${me} joined your trip "${tData.name}"!`, read: false, createdAt: new Date().toISOString() });
-                }
-                showNoticeModal('Success', `You have successfully joined "${tData.name}"!`);
-            }
-            joinModal.classList.add('hidden');
-        } else { showNoticeModal('Error', 'Invalid Trip Code. Please check and try again.'); }
+        if (tripDocRef && tData) { await processJoin(tripDocRef, tData, me, joinModal); } else { showNoticeModal('Error', 'Invalid Trip Code. Please check and try again.'); }
     } catch (e) { showNoticeModal('Error', 'Network error.'); } finally { btnJoinSubmit.textContent = 'Join'; btnJoinSubmit.disabled = false; }
 });
 
@@ -170,22 +196,18 @@ async function checkInvite() {
             else { try { const docSnap = await getDoc(doc(db, "trips", inviteCode)); if (docSnap.exists()) { tripDocRef = docSnap.ref; tData = docSnap.data(); } } catch(err) {} }
 
             if (tripDocRef && tData) {
-                const existingMembers = tData.members || []; const lowerMe = me.toLowerCase().replace(/\s+/g, ''); let matchedName = null;
-                existingMembers.forEach(m => { if (m.toLowerCase().replace(/\s+/g, '') === lowerMe) matchedName = m; });
-                if (matchedName) { 
-                    localStorage.setItem('billapp_user_name', matchedName); document.getElementById('settings-name-input').value = matchedName;
-                    window.history.replaceState({}, document.title, window.location.pathname); 
-                } else {
+                const existingMembers = tData.members || []; const lowerMe = me.toLowerCase().replace(/\s+/g, ''); let exactMatch = false; let matchedName = null;
+                existingMembers.forEach(m => { if (m === me) exactMatch = true; else if (m.toLowerCase().replace(/\s+/g, '') === lowerMe) matchedName = m; });
+                const isConfirmed = (tData.confirmedMembers || []).includes(me);
+                
+                if (exactMatch && isConfirmed) { window.history.replaceState({}, document.title, window.location.pathname); } 
+                else {
                     const inviteModal = document.getElementById('invite-modal'); const ownerName = tData.owner || (tData.members && tData.members[0]) || 'someone';
                     document.getElementById('invite-message').innerHTML = `You've been invited to join<br><br><b style="color:white; font-size:1.3rem;">"${tData.name}"</b><br><br><span style="font-size:0.9rem;">Created by ${ownerName}</span>`;
                     inviteModal.classList.remove('hidden');
                     document.getElementById('btn-invite-accept').onclick = async () => {
-                        document.getElementById('btn-invite-accept').textContent = 'Joining...'; await updateDoc(tripDocRef, { members: arrayUnion(me) });
-                        // 🌟 WRITE NOTIFICATION TO FIREBASE
-                        if (tData.owner && tData.owner !== me) {
-                            await addDoc(collection(db, "notifications"), { targetUser: tData.owner, message: `🎉 ${me} joined your trip "${tData.name}"!`, read: false, createdAt: new Date().toISOString() });
-                        }
-                        inviteModal.classList.add('hidden'); showNoticeModal('Success', 'You have joined the trip!'); window.history.replaceState({}, document.title, window.location.pathname);
+                        document.getElementById('btn-invite-accept').textContent = 'Joining...';
+                        await processJoin(tripDocRef, tData, me, inviteModal);
                     };
                     document.getElementById('btn-invite-cancel').onclick = () => { inviteModal.classList.add('hidden'); window.history.replaceState({}, document.title, window.location.pathname); };
                 }
@@ -251,7 +273,11 @@ function renderTripCard(id, data) {
     const tripList = document.getElementById('trip-list-container'); const msg = tripList.querySelector('div[style*="text-align: center"]'); if (msg) msg.remove();
     const colors = [['#1e3a8a', '#0f172a'], ['#831843', '#0f172a'], ['#064e3b', '#0f172a'], ['#450a0a', '#0f172a']]; const randomColor = colors[Math.floor(Math.random() * colors.length)]; const startObj = new Date(data.startDate); const endObj = new Date(data.endDate); const dateDisplay = `${startObj.toLocaleString('en-US', {month: 'short'})} ${startObj.getDate()} - ${endObj.toLocaleString('en-US', {month: 'short'})} ${endObj.getDate()}`;
     const wrapper = document.createElement('div'); wrapper.className = 'trip-item-wrapper'; const actionBg = document.createElement('div'); actionBg.className = 'trip-item-action-bg';
-    const me = getCurrentUser(); const tripOwner = data.owner || (data.members && data.members[0]) || 'Unknown'; const isOwner = tripOwner === me;
+    
+    // 🛡️ Safe Case-Insensitive Check
+    const me = getCurrentUser(); const lowerMe = me.toLowerCase().replace(/\s+/g, '');
+    const tripOwner = data.owner || (data.members && data.members[0]) || 'Unknown'; 
+    const isOwner = tripOwner.toLowerCase().replace(/\s+/g, '') === lowerMe;
 
     if (isOwner) {
         actionBg.innerHTML = `<div class="action-edit">Edit</div><div class="action-delete">Delete</div>`;
@@ -266,9 +292,11 @@ function renderTripCard(id, data) {
 }
 
 function updateAssignmentModalMembers(membersArray) {
-    const paidByContainer = document.getElementById('paid-by-container'); const splitContainer = document.getElementById('split-between-container'); paidByContainer.innerHTML = ''; splitContainer.innerHTML = ''; const me = getCurrentUser();
+    const paidByContainer = document.getElementById('paid-by-container'); const splitContainer = document.getElementById('split-between-container'); paidByContainer.innerHTML = ''; splitContainer.innerHTML = ''; 
+    const me = getCurrentUser(); const lowerMe = me.toLowerCase().replace(/\s+/g, '');
     membersArray.forEach((member, index) => {
-        const isMe = member === me; const paidBubble = document.createElement('div'); paidBubble.className = `avatar-bubble ${isMe || (index === 0 && !membersArray.includes(me)) ? 'active' : ''}`; paidBubble.textContent = member; paidByContainer.appendChild(paidBubble);
+        const isMe = member.toLowerCase().replace(/\s+/g, '') === lowerMe; 
+        const paidBubble = document.createElement('div'); paidBubble.className = `avatar-bubble ${isMe || (index === 0 && !membersArray.some(m => m.toLowerCase().replace(/\s+/g, '') === lowerMe)) ? 'active' : ''}`; paidBubble.textContent = member; paidByContainer.appendChild(paidBubble);
         const splitBubble = document.createElement('div'); splitBubble.className = 'avatar-bubble checkable active'; splitBubble.textContent = member; splitContainer.appendChild(splitBubble);
     });
 }
@@ -320,7 +348,7 @@ const tipDialControl = setupCircularDial('tip-wrapper', 'tip-ring', 'tip-thumb',
 settingsNameInput.value = localStorage.getItem('billapp_user_name') || ''; settingsVenmoInput.value = localStorage.getItem('billapp_venmo_id') || ''; settingsZelleInput.value = localStorage.getItem('billapp_zelle_id') || '';
 btnSettings.addEventListener('click', () => { settingsNameInput.value = localStorage.getItem('billapp_user_name') || ''; settingsVenmoInput.value = localStorage.getItem('billapp_venmo_id') || ''; settingsZelleInput.value = localStorage.getItem('billapp_zelle_id') || ''; settingsModal.classList.remove('hidden'); });
 btnSettingsCancel.addEventListener('click', () => settingsModal.classList.add('hidden'));
-btnSettingsSave.addEventListener('click', () => { localStorage.setItem('billapp_user_name', settingsNameInput.value.trim()); localStorage.setItem('billapp_venmo_id', settingsVenmoInput.value.trim()); localStorage.setItem('billapp_zelle_id', settingsZelleInput.value.trim()); settingsModal.classList.add('hidden'); showNoticeModal('Profile Saved', ''); });
+btnSettingsSave.addEventListener('click', () => { localStorage.setItem('billapp_user_name', settingsNameInput.value.trim()); localStorage.setItem('billapp_venmo_id', settingsVenmoInput.value.trim()); localStorage.setItem('billapp_zelle_id', settingsZelleInput.value.trim()); settingsModal.classList.add('hidden'); showNoticeModal('Profile Saved', ''); loadTrips(); /* 🌟 Refresh in case name change affects view */ });
 
 btnSnap.addEventListener('click', () => cameraInput.click()); btnCropCancel.addEventListener('click', () => { cropModal.classList.add('hidden'); if (cropper) cropper.destroy(); cameraInput.value = ''; });
 cameraInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { cropImage.src = e.target.result; cropModal.classList.remove('hidden'); if (cropper) cropper.destroy(); cropper = new Cropper(cropImage, { viewMode: 1, dragMode: 'crop', autoCropArea: 0.8, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false }); }; reader.readAsDataURL(file); });
