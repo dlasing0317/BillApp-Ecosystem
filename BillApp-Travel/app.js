@@ -1,5 +1,5 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V40.0 - GOD MODE)
+// 🌟 FIREBASE SETUP & IMPORT (V40.1 - Gatekeeper)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, arrayUnion, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -22,7 +22,7 @@ function showToast(msg) {
 }
 
 // ==========================================
-// 🌟 NOTIFICATIONS SYSTEM (V40.0 - Time-independent Toast)
+// 🌟 NOTIFICATIONS SYSTEM 
 // ==========================================
 window.currentUnreadNotifs = [];
 let notifUnsubscribe = null;
@@ -31,10 +31,7 @@ let isInitialNotifLoad = true;
 function setupNotifications() {
     const me = getCurrentUser(); if (me === 'Guest') return;
     const lowerMe = me.toLowerCase().replace(/\s+/g, '');
-    
-    // 🌟 100% 安全嘅 targetUserLower 查詢
     const q = query(collection(db, "notifications"), where("targetUserLower", "==", lowerMe));
-    
     if (notifUnsubscribe) notifUnsubscribe();
 
     notifUnsubscribe = onSnapshot(q, (snapshot) => {
@@ -53,15 +50,9 @@ function setupNotifications() {
             notifList.innerHTML += `<div class="glass-box" style="padding: 12px; opacity: ${data.read ? '0.5' : '1'}; background: ${data.read ? 'transparent' : 'rgba(125, 211, 252, 0.1)'};"><div style="color: white; font-size: 0.95rem;">${data.message}</div><div style="color: var(--text-dim); font-size: 0.75rem; margin-top: 5px;">${new Date(data.createdAt).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</div></div>`;
         });
 
-        if (unreadCount > 0) { badge.style.display = 'flex'; badge.textContent = unreadCount; } 
-        else { badge.style.display = 'none'; }
-
-        // 🌟 拋棄系統時間，只睇有冇新 Document 加入
+        if (unreadCount > 0) { badge.style.display = 'flex'; badge.textContent = unreadCount; } else { badge.style.display = 'none'; }
         snapshot.docChanges().forEach((change) => {
-            if (change.type === "added" && !isInitialNotifLoad) {
-                const data = change.doc.data();
-                if (!data.read) showToast(data.message);
-            }
+            if (change.type === "added" && !isInitialNotifLoad) { const data = change.doc.data(); if (!data.read) showToast(data.message); }
         });
         isInitialNotifLoad = false;
     });
@@ -71,7 +62,7 @@ document.getElementById('btn-notifications').addEventListener('click', () => { d
 document.getElementById('btn-notifications-close').addEventListener('click', () => { document.getElementById('notifications-modal').classList.add('hidden'); });
 
 // ==========================================
-// 🌟 FIREBASE TRIPS FETCHING (V40.0 - Strict Owner Isolation)
+// 🌟 FIREBASE TRIPS FETCHING 
 // ==========================================
 let tripsUnsubscribe = null;
 
@@ -79,7 +70,6 @@ function loadTrips() {
     const tripList = document.getElementById('trip-list-container'); const me = getCurrentUser();
     const lowerMe = me.toLowerCase().replace(/\s+/g, '');
     const q = query(collection(db, "trips"), orderBy("createdAt", "desc"));
-    
     if (tripsUnsubscribe) tripsUnsubscribe();
 
     tripsUnsubscribe = onSnapshot(q, (snapshot) => {
@@ -87,16 +77,11 @@ function loadTrips() {
         if (snapshot.empty) { tripList.innerHTML = '<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">No Trips yet. Click + to create.</div>'; return; }
 
         snapshot.forEach((docSnap) => {
-            const data = docSnap.data(); 
-            const tripOwner = data.owner || 'Unknown'; 
+            const data = docSnap.data(); const tripOwner = data.owner || 'Unknown'; 
             const isOwner = tripOwner.toLowerCase().replace(/\s+/g, '') === lowerMe;
-            
-            // 🌟 終極隔離: 如果唔係 Owner，你必須入過 Code (喺 confirmedMembers) 先有資格睇到個 Trip！
             let isConfirmed = false;
-            if (data.confirmedMembers && Array.isArray(data.confirmedMembers)) {
-                isConfirmed = data.confirmedMembers.some(m => m.toLowerCase().replace(/\s+/g, '') === lowerMe);
-            }
-
+            if (data.confirmedMembers && Array.isArray(data.confirmedMembers)) { isConfirmed = data.confirmedMembers.some(m => m.toLowerCase().replace(/\s+/g, '') === lowerMe); } 
+            else if (!data.joinCode) { isConfirmed = data.members && data.members.some(m => m.toLowerCase().replace(/\s+/g, '') === lowerMe); }
             if (isOwner || isConfirmed) { renderTripCard(docSnap.id, data); hasTrips = true; }
         });
         if (!hasTrips) tripList.innerHTML = `<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">You haven't joined any trips yet. Click the 🤝 icon to join.</div>`;
@@ -134,7 +119,7 @@ async function loadExpenses(tripId) {
 }
 
 // ==========================================
-// 🌟 JOIN & MERGE LOGIC (V40.0 - Centered DB Writes)
+// 🌟 JOIN & MERGE LOGIC 
 // ==========================================
 async function processJoin(tripDocRef, tData, me, modalToClose) {
     const existingMembers = tData.members || [];
@@ -149,26 +134,17 @@ async function processJoin(tripDocRef, tData, me, modalToClose) {
     if (!isAlreadyConfirmed) {
         confirmed.push(targetName);
         if (!matchedName) existingMembers.push(me);
-
         await updateDoc(tripDocRef, { members: existingMembers, confirmedMembers: confirmed });
         
-        // 🌟 FORCE NOTIFICATION CREATION WITH TARGETUSERLOWER
         if (tData.owner && tData.owner.toLowerCase().replace(/\s+/g, '') !== lowerMe) { 
             const ownerLower = tData.owner.toLowerCase().replace(/\s+/g, '');
-            await addDoc(collection(db, "notifications"), { 
-                targetUser: tData.owner, 
-                targetUserLower: ownerLower,
-                message: `🎉 ${targetName} joined your trip "${tData.name}"!`, 
-                read: false, 
-                createdAt: new Date().toISOString() 
-            }); 
+            await addDoc(collection(db, "notifications"), { targetUser: tData.owner, targetUserLower: ownerLower, message: `🎉 ${targetName} joined your trip "${tData.name}"!`, read: false, createdAt: new Date().toISOString() }); 
         }
         showNoticeModal('Success', `You joined "${tData.name}"!`);
     } else { showNoticeModal('Already Joined', `You are already in "${tData.name}".`); }
 
     if (modalToClose) modalToClose.classList.add('hidden');
     window.history.replaceState({}, document.title, window.location.pathname);
-    // Explicitly call loadTrips just in case
     loadTrips();
 }
 
@@ -230,13 +206,23 @@ document.querySelectorAll('#paid-by-container').forEach(container => { container
 document.querySelectorAll('#split-between-container').forEach(container => { container.addEventListener('click', function(e) { if(e.target.classList.contains('checkable')) { e.target.classList.toggle('active'); } }); });
 
 // ==========================================
-// 🌟 TRIP LOGIC
+// 🌟 TRIP LOGIC (GATEKEEPER ADDED TO + BUTTON)
 // ==========================================
 const btnAddTrip = document.getElementById('btn-add-trip'); const newTripModal = document.getElementById('new-trip-modal'); const btnNewTripCancel = document.getElementById('btn-new-trip-cancel'); const btnNewTripSave = document.getElementById('btn-new-trip-save'); const newTripNameInput = document.getElementById('new-trip-name'); const newTripStartInput = document.getElementById('new-trip-start'); const newTripEndInput = document.getElementById('new-trip-end'); const newMemberInput = document.getElementById('new-member-input'); const btnAddMember = document.getElementById('btn-add-member'); const newTripMembersList = document.getElementById('new-trip-members-list'); const tripModalTitle = document.getElementById('trip-modal-title');
 let currentNewTripMembers = [getCurrentUser()]; 
 function renderNewTripMembers() { newTripMembersList.innerHTML = ''; currentNewTripMembers.forEach(member => { const bubble = document.createElement('div'); bubble.className = 'avatar-bubble'; bubble.style.display = 'flex'; bubble.style.alignItems = 'center'; bubble.innerHTML = `${member} <span class="remove-btn" style="color: #ff4444; margin-left: 8px; font-size: 1.2rem; cursor: pointer; line-height: 1;">×</span>`; bubble.querySelector('.remove-btn').addEventListener('click', () => { currentNewTripMembers = currentNewTripMembers.filter(m => m !== member); renderNewTripMembers(); }); newTripMembersList.appendChild(bubble); }); }
 btnAddMember.addEventListener('click', () => { const name = newMemberInput.value.trim(); if (name && !currentNewTripMembers.includes(name)) { currentNewTripMembers.push(name); newMemberInput.value = ''; renderNewTripMembers(); } }); newMemberInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') btnAddMember.click(); });
-btnAddTrip.addEventListener('click', () => { tripModalTitle.textContent = 'Create New Trip'; newTripNameInput.value = ''; newMemberInput.value = ''; currentNewTripMembers = [getCurrentUser()]; renderNewTripMembers(); currentTripId = null; newTripModal.classList.remove('hidden'); });
+
+// 🌟 V40.1 GATEKEEPER APPLIED HERE
+btnAddTrip.addEventListener('click', () => { 
+    const me = getCurrentUser();
+    if (me === 'Guest') {
+        showNoticeModal('Profile Required', 'Please click the profile icon (top right) and set your Name before creating a trip!');
+        return;
+    }
+    tripModalTitle.textContent = 'Create New Trip'; newTripNameInput.value = ''; newMemberInput.value = ''; currentNewTripMembers = [me]; renderNewTripMembers(); currentTripId = null; newTripModal.classList.remove('hidden'); 
+});
+
 btnNewTripCancel.addEventListener('click', () => { newTripModal.classList.add('hidden'); });
 
 document.getElementById('btn-invite-member').addEventListener('click', async (e) => {
@@ -351,11 +337,7 @@ const tipDialControl = setupCircularDial('tip-wrapper', 'tip-ring', 'tip-thumb',
 settingsNameInput.value = localStorage.getItem('billapp_user_name') || ''; settingsVenmoInput.value = localStorage.getItem('billapp_venmo_id') || ''; settingsZelleInput.value = localStorage.getItem('billapp_zelle_id') || '';
 btnSettings.addEventListener('click', () => { settingsNameInput.value = localStorage.getItem('billapp_user_name') || ''; settingsVenmoInput.value = localStorage.getItem('billapp_venmo_id') || ''; settingsZelleInput.value = localStorage.getItem('billapp_zelle_id') || ''; settingsModal.classList.remove('hidden'); });
 btnSettingsCancel.addEventListener('click', () => settingsModal.classList.add('hidden'));
-btnSettingsSave.addEventListener('click', () => { 
-    localStorage.setItem('billapp_user_name', settingsNameInput.value.trim()); localStorage.setItem('billapp_venmo_id', settingsVenmoInput.value.trim()); localStorage.setItem('billapp_zelle_id', settingsZelleInput.value.trim()); 
-    settingsModal.classList.add('hidden'); showNoticeModal('Profile Saved', ''); 
-    loadTrips(); setupNotifications(); 
-});
+btnSettingsSave.addEventListener('click', () => { localStorage.setItem('billapp_user_name', settingsNameInput.value.trim()); localStorage.setItem('billapp_venmo_id', settingsVenmoInput.value.trim()); localStorage.setItem('billapp_zelle_id', settingsZelleInput.value.trim()); settingsModal.classList.add('hidden'); showNoticeModal('Profile Saved', ''); loadTrips(); setupNotifications(); });
 
 btnSnap.addEventListener('click', () => cameraInput.click()); btnCropCancel.addEventListener('click', () => { cropModal.classList.add('hidden'); if (cropper) cropper.destroy(); cameraInput.value = ''; });
 cameraInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { cropImage.src = e.target.result; cropModal.classList.remove('hidden'); if (cropper) cropper.destroy(); cropper = new Cropper(cropImage, { viewMode: 1, dragMode: 'crop', autoCropArea: 0.8, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false }); }; reader.readAsDataURL(file); });
