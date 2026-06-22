@@ -13,7 +13,7 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <link rel="stylesheet" href="../shared/core-ui.css">
-    <link rel="stylesheet" href="style.css?v=38.2">
+    <link rel="stylesheet" href="style.css?v=39.0">
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
@@ -35,7 +35,6 @@
                 <h1 style="color: white; font-size: 2rem;">Trips</h1>
             </div>
             <div style="display: flex; gap: 10px; position: relative; top: 0; right: 0;">
-                
                 <div style="position: relative;">
                     <button class="profile-settings-btn" id="btn-notifications" style="position: static; width: 44px; height: 44px; color: #fff;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
@@ -54,7 +53,6 @@
                 </button>
             </div>
         </div>
-        
         <div class="content-scroll" id="trip-list-container">
             <div style="text-align: center; color: var(--text-dim); margin-top: 20px;" id="loading-trips">Loading Trips...</div>
         </div>
@@ -62,34 +60,18 @@
 
     <div id="page-trip" class="app-page">
         <div class="header-section">
-            <button id="btn-back-home" class="icon-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            </button>
+            <button id="btn-back-home" class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
             <h2 id="trip-header-title" style="color: white; font-size: 1.4rem;">Trip Details</h2>
             <div style="display: flex; gap: 5px;">
-                <button class="profile-settings-btn" id="btn-manual-add" style="position: static; width: 44px; height: 44px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
+                <button class="profile-settings-btn" id="btn-manual-add" style="position: static; width: 44px; height: 44px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
             </div>
         </div>
-        
-        <div class="content-scroll" id="trip-timeline">
-            <div class="glass-box" style="margin-bottom: 15px; opacity: 0.5;">
-                <div style="text-align: center; color: var(--text-dim); font-size: 0.9rem;">Start of trip timeline</div>
-            </div>
-        </div>
-
-        <div class="fab-container">
-            <button id="fab-trip" class="aperture-btn fab-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>
-            </button>
-        </div>
+        <div class="content-scroll" id="trip-timeline"><div class="glass-box" style="margin-bottom: 15px; opacity: 0.5;"><div style="text-align: center; color: var(--text-dim); font-size: 0.9rem;">Start of trip timeline</div></div></div>
+        <div class="fab-container"><button id="fab-trip" class="aperture-btn fab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg></button></div>
     </div>
 
     <div id="page-scanner" class="app-page dashboard-container">
-        <div style="position: absolute; top: calc(env(safe-area-inset-top) + 20px); left: 20px; z-index: 100;">
-            <button id="btn-cancel-scan" class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-        </div>
+        <div style="position: absolute; top: calc(env(safe-area-inset-top) + 20px); left: 20px; z-index: 100;"><button id="btn-cancel-scan" class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>
         <div class="top-section"><button id="btn-snap" class="aperture-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg></button></div>
         <div class="dials-row">
             <div class="dial-container"><div class="dial-title">Tip %</div><div class="dial-svg-wrapper" id="tip-wrapper"><svg viewBox="0 0 100 100"><circle class="dial-bg" cx="50" cy="50" r="38"></circle><circle class="dial-progress" id="tip-ring" cx="50" cy="50" r="38"></circle><circle class="dial-thumb" id="tip-thumb" cx="50" cy="12" r="5"></circle></svg><div class="dial-center-text" id="tip-display">5%</div></div></div>
@@ -97,12 +79,7 @@
         </div>
         <div class="center-result-section"><div class="result-orb" id="result-orb"><div class="orb-glare"></div><div class="orb-content"><span class="orb-label">PER PERSON</span><h1 class="orb-amount" id="per-person-amount">$0.00</h1></div></div></div>
         <div class="bottom-controls-row">
-            <div class="manual-panel">
-                <div class="glass-box">
-                    <div class="input-line"><label>Subtotal</label><div class="input-with-symbol"><span>$</span><input type="number" id="manual-subtotal" placeholder="0.00" step="0.01"></div></div><div class="divider"></div>
-                    <div class="input-line"><label id="tax-label">Tax</label><div class="input-with-symbol"><span>$</span><input type="number" id="manual-tax" placeholder="0.00" step="0.01"></div></div>
-                </div>
-            </div>
+            <div class="manual-panel"><div class="glass-box"><div class="input-line"><label>Subtotal</label><div class="input-with-symbol"><span>$</span><input type="number" id="manual-subtotal" placeholder="0.00" step="0.01"></div></div><div class="divider"></div><div class="input-line"><label id="tax-label">Tax</label><div class="input-with-symbol"><span>$</span><input type="number" id="manual-tax" placeholder="0.00" step="0.01"></div></div></div></div>
             <div class="actions-panel">
                 <div class="action-wrapper"><button class="action-circle-btn share-btn" id="btn-next" style="color: var(--accent-blue); border-color: var(--accent-blue);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button></div>
                 <div class="action-wrapper"><button class="action-circle-btn done-btn" id="btn-done"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button></div>
@@ -113,11 +90,8 @@
     <div id="notifications-modal" class="modal-overlay hidden" style="z-index: 9999;">
         <div class="glass-modal-card" style="max-width: 360px; width: 90%; padding: 25px 20px; max-height: 80vh;">
             <h3 class="modal-title" style="margin-bottom: 15px; color: var(--text-main);">Notifications 🔔</h3>
-            <div class="content-scroll" id="notification-list" style="width: 100%; max-height: 50vh; overflow-y: auto; padding: 0; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;">
-            </div>
-            <div style="width: 100%;">
-                <button class="modal-close-btn" id="btn-notifications-close" style="width: 100%; background: #21242D; color: #fff;">Close</button>
-            </div>
+            <div class="content-scroll" id="notification-list" style="width: 100%; max-height: 50vh; overflow-y: auto; padding: 0; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;"></div>
+            <div style="width: 100%;"><button class="modal-close-btn" id="btn-notifications-close" style="width: 100%; background: #21242D; color: #fff;">Close</button></div>
         </div>
     </div>
     
@@ -152,7 +126,7 @@
         <div class="glass-modal-card">
             <h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3>
             <div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;">
-                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V38.2 (Strict Confirmation)</span></div>
+                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V39.0 (Strict Security)</span></div>
                 <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span></div>
             </div>
             <div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div>
@@ -167,10 +141,7 @@
                 <div class="modal-input-glass" style="padding: 15px;"><span style="color: var(--text-dim); font-size: 1.2rem;">$</span><input type="number" id="basic-expense-amount" placeholder="0.00" step="0.01" style="width: 80%; text-align: right; font-size: 1.4rem; font-weight: bold;"></div>
                 <div><label style="color: var(--text-dim); font-size: 0.85rem; margin-left: 5px;">PAID BY</label><div class="avatar-scroll" id="basic-paid-by-container" style="margin-top: 5px;"></div></div>
             </div>
-            <div style="display: flex; gap: 10px; width: 100%; margin-top: 25px;">
-                <button class="modal-close-btn" id="btn-basic-cancel" style="background: #21242D; color: #fff;">Cancel</button>
-                <button class="modal-close-btn" id="btn-basic-save" style="background: var(--accent-blue); color: #000;">Save</button>
-            </div>
+            <div style="display: flex; gap: 10px; width: 100%; margin-top: 25px;"><button class="modal-close-btn" id="btn-basic-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-basic-save" style="background: var(--accent-blue); color: #000;">Save</button></div>
         </div>
     </div>
 
@@ -182,10 +153,7 @@
                 <div><label style="color: var(--text-dim); font-size: 0.85rem; margin-left: 5px;">PAID BY</label><div class="avatar-scroll" id="paid-by-container"></div></div>
                 <div><label style="color: var(--text-dim); font-size: 0.85rem; margin-left: 5px;">SPLIT BETWEEN</label><div class="avatar-scroll" id="split-between-container"></div></div>
             </div>
-            <div style="display: flex; gap: 10px; width: 100%; margin-top: 25px;">
-                <button class="modal-close-btn" id="btn-assignment-cancel" style="background: #21242D; color: #fff;">Cancel</button>
-                <button class="modal-close-btn" id="btn-assignment-save" style="background: var(--accent-blue); color: #000;">Save</button>
-            </div>
+            <div style="display: flex; gap: 10px; width: 100%; margin-top: 25px;"><button class="modal-close-btn" id="btn-assignment-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-assignment-save" style="background: var(--accent-blue); color: #000;">Save</button></div>
         </div>
     </div>
 
@@ -216,10 +184,7 @@
                 </div>
                 <div class="avatar-scroll" id="new-trip-members-list" style="min-height: 50px; flex-wrap: wrap; overflow: visible;"></div>
             </div>
-            <div style="display: flex; gap: 10px; width: 100%; margin-top: 25px;">
-                <button class="modal-close-btn" id="btn-new-trip-cancel" style="background: #21242D; color: #fff;">Cancel</button>
-                <button class="modal-close-btn" id="btn-new-trip-save" style="background: var(--accent-blue); color: #000;">Save Trip</button>
-            </div>
+            <div style="display: flex; gap: 10px; width: 100%; margin-top: 25px;"><button class="modal-close-btn" id="btn-new-trip-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-new-trip-save" style="background: var(--accent-blue); color: #000;">Save Trip</button></div>
         </div>
     </div>
 
@@ -231,36 +196,18 @@
                 <div class="modal-input-glass"><label>Venmo ID</label><input type="text" id="settings-venmo-input" placeholder="Without @"></div>
                 <div class="modal-input-glass"><label>Zelle</label><input type="text" id="settings-zelle-input" placeholder="Phone or Email"></div>
             </div>
-            <div style="display: flex; gap: 10px; width: 100%; margin-top: 20px;">
-                <button class="modal-close-btn" id="btn-settings-cancel" style="background: #21242D; color: #fff;">Cancel</button>
-                <button class="modal-close-btn" id="btn-settings-save">Save Profile</button>
-            </div>
+            <div style="display: flex; gap: 10px; width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-settings-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-settings-save">Save Profile</button></div>
         </div>
     </div>
 
-    <div id="crop-modal" class="modal-overlay hidden">
-        <div class="crop-hint">Crop to include items, Subtotal, Tax & Total</div>
-        <div class="crop-container"><img id="crop-image" src="" alt="Cropper"></div>
-        <div class="crop-actions"><button class="crop-btn cancel" id="btn-crop-cancel">Cancel</button><button class="crop-btn confirm" id="btn-crop-confirm">Analyze</button></div>
-    </div>
-
+    <div id="crop-modal" class="modal-overlay hidden"><div class="crop-hint">Crop to include items, Subtotal, Tax & Total</div><div class="crop-container"><img id="crop-image" src="" alt="Cropper"></div><div class="crop-actions"><button class="crop-btn cancel" id="btn-crop-cancel">Cancel</button><button class="crop-btn confirm" id="btn-crop-confirm">Analyze</button></div></div>
     <div id="custom-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" id="modal-title">Notice</h3><div class="modal-content" id="modal-content"></div><button class="modal-close-btn" id="modal-close-btn">OK</button></div></div>
-
-    <div id="confirm-modal" class="modal-overlay hidden" style="z-index: 999;">
-        <div class="glass-modal-card" style="max-width: 320px; padding: 25px 20px;">
-            <h3 class="modal-title" style="margin-bottom: 15px; color: #FF3B30;">Warning</h3>
-            <div class="modal-content" id="confirm-message" style="margin-bottom: 25px; text-align: center; color: var(--text-main); font-size: 1.1rem;">Are you sure you want to delete this?</div>
-            <div style="display: flex; gap: 10px; width: 100%;">
-                <button class="modal-close-btn" id="btn-confirm-cancel" style="background: #21242D; color: #fff;">Cancel</button>
-                <button class="modal-close-btn" id="btn-confirm-delete" style="background: rgba(255, 59, 48, 0.2); color: #FF3B30;">Delete</button>
-            </div>
-        </div>
-    </div>
+    <div id="confirm-modal" class="modal-overlay hidden" style="z-index: 999;"><div class="glass-modal-card" style="max-width: 320px; padding: 25px 20px;"><h3 class="modal-title" style="margin-bottom: 15px; color: #FF3B30;">Warning</h3><div class="modal-content" id="confirm-message" style="margin-bottom: 25px; text-align: center; color: var(--text-main); font-size: 1.1rem;">Are you sure you want to delete this?</div><div style="display: flex; gap: 10px; width: 100%;"><button class="modal-close-btn" id="btn-confirm-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-confirm-delete" style="background: rgba(255, 59, 48, 0.2); color: #FF3B30;">Delete</button></div></div></div>
 
     <div id="toast-notification" class="toast-hidden" style="position: fixed; top: calc(env(safe-area-inset-top) + 10px); left: 50%; transform: translateX(-50%); background: var(--accent-blue); color: #000; padding: 12px 24px; border-radius: 30px; font-weight: bold; z-index: 10000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; gap: 8px;">
         <span>🎉</span> <span id="toast-message">Notification</span>
     </div>
 
-    <script type="module" src="app.js?v=38.2"></script>
+    <script type="module" src="app.js?v=39.0"></script>
 </body>
 </html>
