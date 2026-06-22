@@ -1,9 +1,9 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V37.3)
+// 🌟 FIREBASE SETUP & IMPORT (V37.4)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-// 🌟 Added 'where' to imports
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, arrayUnion, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// 🌟 Added 'onSnapshot' for real-time Admin notifications
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, arrayUnion, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { autoResizeInput, showNoticeModal, showConfirmModal, initConfirmModal, setupSwipeActions } from '../shared/core-ui.js';
 
@@ -16,23 +16,71 @@ const getCurrentUser = () => { const name = localStorage.getItem('billapp_user_n
 let currentTripMode = null; let currentTripId = null; let currentTripData = null; let editingExpenseId = null; 
 function navigateTo(pageId) { document.querySelectorAll('.app-page').forEach(p => p.classList.remove('active')); document.getElementById(pageId).classList.add('active'); }
 
+// 🌟 Toast Notification Function
+function showToast(msg) {
+    const toast = document.getElementById('toast-notification');
+    const toastMsg = document.getElementById('toast-message');
+    if(!toast) return;
+    toastMsg.textContent = msg;
+    toast.classList.remove('toast-hidden'); toast.classList.add('toast-visible');
+    setTimeout(() => { toast.classList.remove('toast-visible'); toast.classList.add('toast-hidden'); }, 4000);
+}
+
 // ==========================================
-// 🌟 FIREBASE DATA FETCHING
+// 🌟 FIREBASE REAL-TIME FETCHING (onSnapshot)
 // ==========================================
-async function loadTrips() {
-    const tripList = document.getElementById('trip-list-container'); tripList.innerHTML = ''; const me = getCurrentUser();
-    try {
-        const q = query(collection(db, "trips"), orderBy("createdAt", "desc")); const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) { tripList.innerHTML = '<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">No Trips yet. Click + to create.</div>'; return; }
+let knownTripMembers = {}; 
+
+function loadTrips() {
+    const tripList = document.getElementById('trip-list-container'); 
+    const me = getCurrentUser();
+    const q = query(collection(db, "trips"), orderBy("createdAt", "desc"));
+    
+    // 🌟 Upgrade: Real-time listener instead of one-time fetch
+    onSnapshot(q, (snapshot) => {
+        tripList.innerHTML = ''; 
         let hasTrips = false;
-        querySnapshot.forEach((docSnap) => {
+        
+        // 🌟 Admin Notification Logic
+        snapshot.docChanges().forEach((change) => {
+            const data = change.doc.data();
+            const docId = change.doc.id;
+            
+            if (change.type === "added") { knownTripMembers[docId] = data.members || []; }
+            if (change.type === "modified") {
+                const oldMembers = knownTripMembers[docId] || [];
+                const newMembers = data.members || [];
+                
+                // If I am the owner, and member list grew -> Send Toast!
+                if (data.owner === me && newMembers.length > oldMembers.length) {
+                    const newPeeps = newMembers.filter(x => !oldMembers.includes(x));
+                    if (newPeeps.length > 0 && newPeeps[0] !== me) {
+                        showToast(`${newPeeps.join(', ')} joined "${data.name}"!`);
+                    }
+                }
+                knownTripMembers[docId] = newMembers;
+                
+                // Live update the current view if we are inside the trip
+                if (currentTripId === docId) {
+                    currentTripData = data;
+                    updateAssignmentModalMembers(data.members);
+                }
+            }
+        });
+
+        if (snapshot.empty) { tripList.innerHTML = '<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">No Trips yet. Click + to create.</div>'; return; }
+        
+        snapshot.forEach((docSnap) => {
             const data = docSnap.data(); const tripOwner = data.owner || (data.members && data.members[0]) || 'Unknown'; 
             if (tripOwner === me || (data.members && data.members.includes(me))) { renderTripCard(docSnap.id, data); hasTrips = true; }
         });
         if (!hasTrips) tripList.innerHTML = `<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">You haven't joined any trips yet. Click the 🤝 icon to join.</div>`;
-    } catch (e) { tripList.innerHTML = '<div style="text-align: center; color: #ff4444; margin-top: 20px;">Failed to load trips.</div>'; }
+    }, (error) => {
+        tripList.innerHTML = '<div style="text-align: center; color: #ff4444; margin-top: 20px;">Failed to load trips.</div>';
+    });
 }
 
+// Keep expenses as one-time fetch for now to save reads, unless you want them live too
 async function loadExpenses(tripId) {
     const timeline = document.getElementById('trip-timeline'); timeline.innerHTML = '<div class="glass-box" style="margin-bottom: 15px; opacity: 0.5;"><div style="text-align: center; color: var(--text-dim); font-size: 0.9rem;">Start of trip timeline</div></div>';
     try {
@@ -62,7 +110,7 @@ async function loadExpenses(tripId) {
 }
 
 // ==========================================
-// 🌟 6-DIGIT CODE LOGIC (Join Trip)
+// 🌟 AUTO-MERGE & JOIN LOGIC
 // ==========================================
 const joinModal = document.getElementById('join-trip-modal');
 const btnOpenJoin = document.getElementById('btn-open-join');
@@ -80,35 +128,33 @@ btnJoinCancel.addEventListener('click', () => { joinModal.classList.add('hidden'
 btnJoinSubmit.addEventListener('click', async () => {
     const inviteCode = joinCodeInput.value.trim();
     if (!inviteCode) { showNoticeModal('Error', 'Please enter a code.'); return; }
-    const me = getCurrentUser();
+    let me = getCurrentUser();
     
     btnJoinSubmit.textContent = 'Checking...'; btnJoinSubmit.disabled = true;
     try {
-        // Search by the 6-digit joinCode
         const q = query(collection(db, "trips"), where("joinCode", "==", inviteCode));
         const querySnapshot = await getDocs(q);
-        
-        let tripDocRef = null;
-        let tData = null;
+        let tripDocRef = null; let tData = null;
 
-        if (!querySnapshot.empty) {
-            tripDocRef = querySnapshot.docs[0].ref;
-            tData = querySnapshot.docs[0].data();
-        } else {
-            // Fallback for old 20-character Document IDs
-            try {
-                const docSnap = await getDoc(doc(db, "trips", inviteCode));
-                if (docSnap.exists()) { tripDocRef = docSnap.ref; tData = docSnap.data(); }
-            } catch(err) { /* Ignore path errors */ }
-        }
+        if (!querySnapshot.empty) { tripDocRef = querySnapshot.docs[0].ref; tData = querySnapshot.docs[0].data(); }
+        else { try { const docSnap = await getDoc(doc(db, "trips", inviteCode)); if (docSnap.exists()) { tripDocRef = docSnap.ref; tData = docSnap.data(); } } catch(err) { } }
 
         if (tripDocRef && tData) {
-            if (tData.members && tData.members.includes(me)) {
-                showNoticeModal('Already Joined', `You are already in "${tData.name}".`);
+            const existingMembers = tData.members || [];
+            const lowerMe = me.toLowerCase().replace(/\s+/g, '');
+            let matchedName = null;
+            
+            // 🌟 Auto-Merge Logic (Case & Space Insensitive)
+            existingMembers.forEach(m => { if (m.toLowerCase().replace(/\s+/g, '') === lowerMe) matchedName = m; });
+
+            if (matchedName) {
+                // Force sync their local profile to match the official trip casing
+                localStorage.setItem('billapp_user_name', matchedName);
+                document.getElementById('settings-name-input').value = matchedName;
+                showNoticeModal('Welcome Back!', `You are recognized as "${matchedName}" in "${tData.name}".`);
             } else {
                 await updateDoc(tripDocRef, { members: arrayUnion(me) });
                 showNoticeModal('Success', `You have successfully joined "${tData.name}"!`);
-                loadTrips();
             }
             joinModal.classList.add('hidden');
         } else { showNoticeModal('Error', 'Invalid Trip Code. Please check and try again.'); }
@@ -116,30 +162,35 @@ btnJoinSubmit.addEventListener('click', async () => {
     finally { btnJoinSubmit.textContent = 'Join'; btnJoinSubmit.disabled = false; }
 });
 
-// Original URL Check updated for 6-digit codes
+// URL Auto-Join Logic (Also uses Auto-Merge)
 async function checkInvite() {
     const urlParams = new URLSearchParams(window.location.search); const inviteCode = urlParams.get('invite');
     if (inviteCode) {
-        const me = getCurrentUser(); if (me === 'Guest') { showNoticeModal('Setup Profile Required', 'Please click the profile icon (top right) and enter your Name before joining a trip!'); return; }
+        let me = getCurrentUser(); if (me === 'Guest') { showNoticeModal('Setup Profile Required', 'Please click the profile icon (top right) and enter your Name before joining a trip!'); return; }
         try {
             const q = query(collection(db, "trips"), where("joinCode", "==", inviteCode));
             const querySnapshot = await getDocs(q);
             let tripDocRef = null; let tData = null;
 
             if (!querySnapshot.empty) { tripDocRef = querySnapshot.docs[0].ref; tData = querySnapshot.docs[0].data(); }
-            else {
-                try { const docSnap = await getDoc(doc(db, "trips", inviteCode)); if (docSnap.exists()) { tripDocRef = docSnap.ref; tData = docSnap.data(); } } catch(err) {}
-            }
+            else { try { const docSnap = await getDoc(doc(db, "trips", inviteCode)); if (docSnap.exists()) { tripDocRef = docSnap.ref; tData = docSnap.data(); } } catch(err) {} }
 
             if (tripDocRef && tData) {
-                if (tData.members && tData.members.includes(me)) { window.history.replaceState({}, document.title, window.location.pathname); } 
-                else {
+                const existingMembers = tData.members || [];
+                const lowerMe = me.toLowerCase().replace(/\s+/g, '');
+                let matchedName = null;
+                existingMembers.forEach(m => { if (m.toLowerCase().replace(/\s+/g, '') === lowerMe) matchedName = m; });
+
+                if (matchedName) { 
+                    localStorage.setItem('billapp_user_name', matchedName); document.getElementById('settings-name-input').value = matchedName;
+                    window.history.replaceState({}, document.title, window.location.pathname); 
+                } else {
                     const inviteModal = document.getElementById('invite-modal'); const ownerName = tData.owner || (tData.members && tData.members[0]) || 'someone';
                     document.getElementById('invite-message').innerHTML = `You've been invited to join<br><br><b style="color:white; font-size:1.3rem;">"${tData.name}"</b><br><br><span style="font-size:0.9rem;">Created by ${ownerName}</span>`;
                     inviteModal.classList.remove('hidden');
                     document.getElementById('btn-invite-accept').onclick = async () => {
                         document.getElementById('btn-invite-accept').textContent = 'Joining...'; await updateDoc(tripDocRef, { members: arrayUnion(me) });
-                        inviteModal.classList.add('hidden'); showNoticeModal('Success', 'You have joined the trip!'); window.history.replaceState({}, document.title, window.location.pathname); loadTrips();
+                        inviteModal.classList.add('hidden'); showNoticeModal('Success', 'You have joined the trip!'); window.history.replaceState({}, document.title, window.location.pathname);
                     };
                     document.getElementById('btn-invite-cancel').onclick = () => { inviteModal.classList.add('hidden'); window.history.replaceState({}, document.title, window.location.pathname); };
                 }
@@ -147,7 +198,10 @@ async function checkInvite() {
         } catch(e) { }
     }
 }
-loadTrips().then(checkInvite);
+
+// Start sequence
+loadTrips();
+checkInvite();
 
 // ==========================================
 // 🌟 Home & Trip Events
@@ -169,7 +223,6 @@ btnAddMember.addEventListener('click', () => { const name = newMemberInput.value
 btnAddTrip.addEventListener('click', () => { tripModalTitle.textContent = 'Create New Trip'; newTripNameInput.value = ''; newMemberInput.value = ''; currentNewTripMembers = [getCurrentUser()]; renderNewTripMembers(); currentTripId = null; newTripModal.classList.remove('hidden'); });
 btnNewTripCancel.addEventListener('click', () => { newTripModal.classList.add('hidden'); });
 
-// 🌟 Generate 6-Digit Invite Link
 document.getElementById('btn-invite-member').addEventListener('click', async (e) => {
     e.preventDefault(); let targetTripId = currentTripId; let targetTripName = newTripNameInput.value.trim();
     let targetJoinCode = currentTripData ? currentTripData.joinCode : null;
@@ -179,28 +232,23 @@ document.getElementById('btn-invite-member').addEventListener('click', async (e)
         const btnInvite = document.getElementById('btn-invite-member'); const originalText = btnInvite.innerHTML; btnInvite.innerHTML = 'Generating...';
         targetJoinCode = Math.floor(100000 + Math.random() * 900000).toString();
         const tripData = { name: targetTripName, startDate: newTripStartInput.value, endDate: newTripEndInput.value, members: currentNewTripMembers, owner: getCurrentUser(), joinCode: targetJoinCode, createdAt: new Date().toISOString() };
-        try { const docRef = await addDoc(collection(db, "trips"), tripData); targetTripId = docRef.id; currentTripId = docRef.id; currentTripData = tripData; tripModalTitle.textContent = 'Edit Trip'; loadTrips(); } catch (err) { btnInvite.innerHTML = originalText; return; } btnInvite.innerHTML = originalText;
+        try { const docRef = await addDoc(collection(db, "trips"), tripData); targetTripId = docRef.id; currentTripId = docRef.id; currentTripData = tripData; tripModalTitle.textContent = 'Edit Trip'; } catch (err) { btnInvite.innerHTML = originalText; return; } btnInvite.innerHTML = originalText;
     } else if (!targetJoinCode) {
-        // Backward compatibility for old trips without a code
         targetJoinCode = Math.floor(100000 + Math.random() * 900000).toString();
-        await updateDoc(doc(db, "trips", targetTripId), { joinCode: targetJoinCode });
-        currentTripData.joinCode = targetJoinCode;
+        await updateDoc(doc(db, "trips", targetTripId), { joinCode: targetJoinCode }); currentTripData.joinCode = targetJoinCode;
     }
 
     const inviteUrl = `${window.location.origin}${window.location.pathname}?invite=${targetJoinCode}`;
     const shareText = `✈️ Join my trip "${targetTripName}" on TripSplit!\n\nOpen the App and tap the 🤝 icon to enter this 6-digit Code:\n\n👉 **${targetJoinCode}**\n\nOr click here to join in browser:\n${inviteUrl}`;
-    
     if (navigator.share) { try { await navigator.share({ title: 'Join my Trip', text: shareText }); } catch(err){} } else { navigator.clipboard.writeText(shareText).then(() => { showNoticeModal('Invite Copied!', 'Send this code to your friends.'); }); }
 });
 
 btnNewTripSave.addEventListener('click', async () => {
     const tripName = newTripNameInput.value.trim(); if (!tripName) { showNoticeModal('Error', '大佬，打個 Trip Name 先啦！'); return; } if (currentNewTripMembers.length === 0) { showNoticeModal('Error', '起碼要有自己一個 Member 啦！'); return; }
     btnNewTripSave.disabled = true; btnNewTripSave.textContent = 'Saving...';
-    
     let targetJoinCode = currentTripData ? currentTripData.joinCode : Math.floor(100000 + Math.random() * 900000).toString();
     const tripData = { name: tripName, startDate: newTripStartInput.value, endDate: newTripEndInput.value, members: currentNewTripMembers, owner: getCurrentUser(), joinCode: targetJoinCode, createdAt: currentTripData && tripModalTitle.textContent === 'Edit Trip' ? currentTripData.createdAt : new Date().toISOString() };
-    
-    try { if (tripModalTitle.textContent === 'Edit Trip') { await updateDoc(doc(db, "trips", currentTripId), tripData); document.getElementById('trip-header-title').textContent = tripData.name; currentTripData = tripData; updateAssignmentModalMembers(tripData.members); loadTrips(); } else { await addDoc(collection(db, "trips"), tripData); loadTrips(); } newTripModal.classList.add('hidden'); } catch (e) { showNoticeModal('Error', 'Save failed!'); } finally { btnNewTripSave.disabled = false; btnNewTripSave.textContent = 'Save Trip'; }
+    try { if (tripModalTitle.textContent === 'Edit Trip') { await updateDoc(doc(db, "trips", currentTripId), tripData); document.getElementById('trip-header-title').textContent = tripData.name; currentTripData = tripData; updateAssignmentModalMembers(tripData.members); } else { await addDoc(collection(db, "trips"), tripData); } newTripModal.classList.add('hidden'); } catch (e) { showNoticeModal('Error', 'Save failed!'); } finally { btnNewTripSave.disabled = false; btnNewTripSave.textContent = 'Save Trip'; }
 });
 
 function renderTripCard(id, data) {

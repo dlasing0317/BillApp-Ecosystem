@@ -13,10 +13,16 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <link rel="stylesheet" href="../shared/core-ui.css">
-    <link rel="stylesheet" href="style.css?v=37.3">
+    <link rel="stylesheet" href="style.css?v=37.4">
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <style>
+        /* 🌟 V37.4 新增: Toast 通知動畫 */
+        .toast-hidden { opacity: 0; pointer-events: none; transform: translate(-50%, -20px) !important; }
+        .toast-visible { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) !important; }
+    </style>
 </head>
 <body ontouchstart="">
     <input type="file" id="camera-input" accept="image/*" style="display: none;">
@@ -60,7 +66,11 @@
             </div>
         </div>
         
-        <div class="content-scroll" id="trip-timeline"></div>
+        <div class="content-scroll" id="trip-timeline">
+            <div class="glass-box" style="margin-bottom: 15px; opacity: 0.5;">
+                <div style="text-align: center; color: var(--text-dim); font-size: 0.9rem;">Start of trip timeline</div>
+            </div>
+        </div>
 
         <div class="fab-container">
             <button id="fab-trip" class="aperture-btn fab-btn">
@@ -124,7 +134,7 @@
         <div class="glass-modal-card">
             <h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3>
             <div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;">
-                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V37.3 (6-Digit OTP)</span></div>
+                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V37.4 (Auto-Merge)</span></div>
                 <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span></div>
             </div>
             <div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div>
@@ -229,6 +239,10 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=37.3"></script>
+    <div id="toast-notification" class="toast-hidden" style="position: fixed; top: calc(env(safe-area-inset-top) + 10px); left: 50%; transform: translateX(-50%); background: var(--accent-blue); color: #000; padding: 12px 24px; border-radius: 30px; font-weight: bold; z-index: 10000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; gap: 8px;">
+        <span>🎉</span> <span id="toast-message">Notification</span>
+    </div>
+
+    <script type="module" src="app.js?v=37.4"></script>
 </body>
 </html>
