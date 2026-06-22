@@ -13,7 +13,7 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <link rel="stylesheet" href="../shared/core-ui.css">
-    <link rel="stylesheet" href="style.css?v=37.2">
+    <link rel="stylesheet" href="style.css?v=37.3">
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
@@ -25,11 +25,7 @@
         <div class="header-section">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <button id="btn-info" style="background: transparent; border: none; padding: 0; color: var(--text-dim); cursor: pointer; display: flex; align-items: center;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 28px; height: 28px;">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 28px; height: 28px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </button>
                 <h1 style="color: white; font-size: 2rem;">Trips</h1>
             </div>
@@ -64,11 +60,7 @@
             </div>
         </div>
         
-        <div class="content-scroll" id="trip-timeline">
-            <div class="glass-box" style="margin-bottom: 15px; opacity: 0.5;">
-                <div style="text-align: center; color: var(--text-dim); font-size: 0.9rem;">Start of trip timeline</div>
-            </div>
-        </div>
+        <div class="content-scroll" id="trip-timeline"></div>
 
         <div class="fab-container">
             <button id="fab-trip" class="aperture-btn fab-btn">
@@ -105,9 +97,9 @@
         <div class="glass-modal-card" style="max-width: 340px; padding: 25px 20px;">
             <h3 class="modal-title" style="margin-bottom: 15px; color: var(--text-main);">Join Trip 🤝</h3>
             <div class="modal-content" style="margin-bottom: 25px; text-align: center; width: 100%;">
-                <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 15px;">Enter the 20-character Trip Code sent by your friend.</p>
+                <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 15px;">Enter the 6-digit Trip Code sent by your friend.</p>
                 <div class="modal-input-glass" style="justify-content: center; padding: 15px;">
-                    <input type="text" id="join-code-input" placeholder="Paste Code Here" style="width: 100%; text-align: center; font-size: 1.1rem; letter-spacing: 1px;">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="join-code-input" placeholder="123456" style="width: 100%; text-align: center; font-size: 1.8rem; letter-spacing: 10px; font-weight: bold; color: var(--accent-blue);">
                 </div>
             </div>
             <div style="display: flex; gap: 10px; width: 100%;">
@@ -132,7 +124,7 @@
         <div class="glass-modal-card">
             <h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3>
             <div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;">
-                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V37.2 (Code Join)</span></div>
+                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V37.3 (6-Digit OTP)</span></div>
                 <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span></div>
             </div>
             <div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div>
@@ -237,6 +229,6 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=37.2"></script>
+    <script type="module" src="app.js?v=37.3"></script>
 </body>
 </html>
