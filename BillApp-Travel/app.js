@@ -1,9 +1,8 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V39.0 - Strict Security)
+// 🌟 FIREBASE SETUP & IMPORT (V40.0 - GOD MODE)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, arrayUnion, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
 import { autoResizeInput, showNoticeModal, showConfirmModal, initConfirmModal, setupSwipeActions } from '../shared/core-ui.js';
 
 const firebaseConfig = { apiKey: "AIzaSyADViQdzsf1MTmsDnf_NiQp0eB-EPFsgxI", authDomain: "billapp-travel.firebaseapp.com", projectId: "billapp-travel", storageBucket: "billapp-travel.firebasestorage.app", messagingSenderId: "47415537906", appId: "1:47415537906:web:c401cdc2dd8bd22d10e06b" };
@@ -23,31 +22,48 @@ function showToast(msg) {
 }
 
 // ==========================================
-// 🌟 NOTIFICATIONS SYSTEM 
+// 🌟 NOTIFICATIONS SYSTEM (V40.0 - Time-independent Toast)
 // ==========================================
 window.currentUnreadNotifs = [];
+let notifUnsubscribe = null;
+let isInitialNotifLoad = true;
 
 function setupNotifications() {
     const me = getCurrentUser(); if (me === 'Guest') return;
-    const q = query(collection(db, "notifications"), where("targetUser", "==", me));
+    const lowerMe = me.toLowerCase().replace(/\s+/g, '');
     
-    onSnapshot(q, (snapshot) => {
+    // 🌟 100% 安全嘅 targetUserLower 查詢
+    const q = query(collection(db, "notifications"), where("targetUserLower", "==", lowerMe));
+    
+    if (notifUnsubscribe) notifUnsubscribe();
+
+    notifUnsubscribe = onSnapshot(q, (snapshot) => {
         const notifList = document.getElementById('notification-list'); const badge = document.getElementById('notification-badge');
         let docsArr = []; snapshot.forEach(d => docsArr.push({id: d.id, ...d.data()}));
         docsArr.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
         
         notifList.innerHTML = ''; let unreadCount = 0; window.currentUnreadNotifs = [];
-        if (docsArr.length === 0) { notifList.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 20px;">No notifications yet.</div>'; badge.style.display = 'none'; return; }
+        if (docsArr.length === 0) { 
+            notifList.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 20px;">No notifications yet.</div>'; 
+            badge.style.display = 'none'; isInitialNotifLoad = false; return; 
+        }
 
         docsArr.forEach(data => {
             if (!data.read) { unreadCount++; window.currentUnreadNotifs.push(data.id); }
             notifList.innerHTML += `<div class="glass-box" style="padding: 12px; opacity: ${data.read ? '0.5' : '1'}; background: ${data.read ? 'transparent' : 'rgba(125, 211, 252, 0.1)'};"><div style="color: white; font-size: 0.95rem;">${data.message}</div><div style="color: var(--text-dim); font-size: 0.75rem; margin-top: 5px;">${new Date(data.createdAt).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</div></div>`;
         });
 
-        if (unreadCount > 0) {
-            badge.style.display = 'flex'; badge.textContent = unreadCount;
-            const latest = docsArr[0]; if (!latest.read && (new Date() - new Date(latest.createdAt)) < 10000) { showToast(latest.message); }
-        } else { badge.style.display = 'none'; }
+        if (unreadCount > 0) { badge.style.display = 'flex'; badge.textContent = unreadCount; } 
+        else { badge.style.display = 'none'; }
+
+        // 🌟 拋棄系統時間，只睇有冇新 Document 加入
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added" && !isInitialNotifLoad) {
+                const data = change.doc.data();
+                if (!data.read) showToast(data.message);
+            }
+        });
+        isInitialNotifLoad = false;
     });
 }
 
@@ -55,14 +71,18 @@ document.getElementById('btn-notifications').addEventListener('click', () => { d
 document.getElementById('btn-notifications-close').addEventListener('click', () => { document.getElementById('notifications-modal').classList.add('hidden'); });
 
 // ==========================================
-// 🌟 FIREBASE TRIPS FETCHING (Strict Security V39.0)
+// 🌟 FIREBASE TRIPS FETCHING (V40.0 - Strict Owner Isolation)
 // ==========================================
+let tripsUnsubscribe = null;
+
 function loadTrips() {
     const tripList = document.getElementById('trip-list-container'); const me = getCurrentUser();
     const lowerMe = me.toLowerCase().replace(/\s+/g, '');
     const q = query(collection(db, "trips"), orderBy("createdAt", "desc"));
     
-    onSnapshot(q, (snapshot) => {
+    if (tripsUnsubscribe) tripsUnsubscribe();
+
+    tripsUnsubscribe = onSnapshot(q, (snapshot) => {
         tripList.innerHTML = ''; let hasTrips = false;
         if (snapshot.empty) { tripList.innerHTML = '<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">No Trips yet. Click + to create.</div>'; return; }
 
@@ -71,13 +91,10 @@ function loadTrips() {
             const tripOwner = data.owner || 'Unknown'; 
             const isOwner = tripOwner.toLowerCase().replace(/\s+/g, '') === lowerMe;
             
-            // 🛡️ THE IRONCLAD RULE: You MUST be in confirmedMembers to see it, UNLESS it's an ancient legacy trip.
+            // 🌟 終極隔離: 如果唔係 Owner，你必須入過 Code (喺 confirmedMembers) 先有資格睇到個 Trip！
             let isConfirmed = false;
             if (data.confirmedMembers && Array.isArray(data.confirmedMembers)) {
                 isConfirmed = data.confirmedMembers.some(m => m.toLowerCase().replace(/\s+/g, '') === lowerMe);
-            } else if (!data.joinCode) {
-                // Legacy trip fallback (Trips created before we had codes)
-                isConfirmed = data.members && data.members.some(m => m.toLowerCase().replace(/\s+/g, '') === lowerMe);
             }
 
             if (isOwner || isConfirmed) { renderTripCard(docSnap.id, data); hasTrips = true; }
@@ -117,7 +134,7 @@ async function loadExpenses(tripId) {
 }
 
 // ==========================================
-// 🌟 JOIN & MERGE LOGIC (Protected & Reliable)
+// 🌟 JOIN & MERGE LOGIC (V40.0 - Centered DB Writes)
 // ==========================================
 async function processJoin(tripDocRef, tData, me, modalToClose) {
     const existingMembers = tData.members || [];
@@ -135,15 +152,24 @@ async function processJoin(tripDocRef, tData, me, modalToClose) {
 
         await updateDoc(tripDocRef, { members: existingMembers, confirmedMembers: confirmed });
         
-        // 🌟 FORCE NOTIFICATION CREATION
+        // 🌟 FORCE NOTIFICATION CREATION WITH TARGETUSERLOWER
         if (tData.owner && tData.owner.toLowerCase().replace(/\s+/g, '') !== lowerMe) { 
-            await addDoc(collection(db, "notifications"), { targetUser: tData.owner, message: `🎉 ${targetName} joined your trip "${tData.name}"!`, read: false, createdAt: new Date().toISOString() }); 
+            const ownerLower = tData.owner.toLowerCase().replace(/\s+/g, '');
+            await addDoc(collection(db, "notifications"), { 
+                targetUser: tData.owner, 
+                targetUserLower: ownerLower,
+                message: `🎉 ${targetName} joined your trip "${tData.name}"!`, 
+                read: false, 
+                createdAt: new Date().toISOString() 
+            }); 
         }
         showNoticeModal('Success', `You joined "${tData.name}"!`);
     } else { showNoticeModal('Already Joined', `You are already in "${tData.name}".`); }
 
     if (modalToClose) modalToClose.classList.add('hidden');
     window.history.replaceState({}, document.title, window.location.pathname);
+    // Explicitly call loadTrips just in case
+    loadTrips();
 }
 
 const joinModal = document.getElementById('join-trip-modal'); const btnOpenJoin = document.getElementById('btn-open-join'); const btnJoinCancel = document.getElementById('btn-join-cancel'); const btnJoinSubmit = document.getElementById('btn-join-submit'); const joinCodeInput = document.getElementById('join-code-input');
@@ -204,7 +230,7 @@ document.querySelectorAll('#paid-by-container').forEach(container => { container
 document.querySelectorAll('#split-between-container').forEach(container => { container.addEventListener('click', function(e) { if(e.target.classList.contains('checkable')) { e.target.classList.toggle('active'); } }); });
 
 // ==========================================
-// 🌟 TRIP LOGIC (Strict Preservation of Owner)
+// 🌟 TRIP LOGIC
 // ==========================================
 const btnAddTrip = document.getElementById('btn-add-trip'); const newTripModal = document.getElementById('new-trip-modal'); const btnNewTripCancel = document.getElementById('btn-new-trip-cancel'); const btnNewTripSave = document.getElementById('btn-new-trip-save'); const newTripNameInput = document.getElementById('new-trip-name'); const newTripStartInput = document.getElementById('new-trip-start'); const newTripEndInput = document.getElementById('new-trip-end'); const newMemberInput = document.getElementById('new-member-input'); const btnAddMember = document.getElementById('btn-add-member'); const newTripMembersList = document.getElementById('new-trip-members-list'); const tripModalTitle = document.getElementById('trip-modal-title');
 let currentNewTripMembers = [getCurrentUser()]; 
@@ -238,7 +264,6 @@ btnNewTripSave.addEventListener('click', async () => {
     btnNewTripSave.disabled = true; btnNewTripSave.textContent = 'Saving...';
     let targetJoinCode = currentTripData ? currentTripData.joinCode : Math.floor(100000 + Math.random() * 900000).toString();
     
-    // 🌟 V39.0 Ensure we don't accidentally steal ownership if we are just editing
     const isEdit = tripModalTitle.textContent === 'Edit Trip';
     const finalOwner = (isEdit && currentTripData && currentTripData.owner) ? currentTripData.owner : getCurrentUser();
     const finalConfirmed = (isEdit && currentTripData && currentTripData.confirmedMembers) ? currentTripData.confirmedMembers : [getCurrentUser()];
@@ -326,7 +351,11 @@ const tipDialControl = setupCircularDial('tip-wrapper', 'tip-ring', 'tip-thumb',
 settingsNameInput.value = localStorage.getItem('billapp_user_name') || ''; settingsVenmoInput.value = localStorage.getItem('billapp_venmo_id') || ''; settingsZelleInput.value = localStorage.getItem('billapp_zelle_id') || '';
 btnSettings.addEventListener('click', () => { settingsNameInput.value = localStorage.getItem('billapp_user_name') || ''; settingsVenmoInput.value = localStorage.getItem('billapp_venmo_id') || ''; settingsZelleInput.value = localStorage.getItem('billapp_zelle_id') || ''; settingsModal.classList.remove('hidden'); });
 btnSettingsCancel.addEventListener('click', () => settingsModal.classList.add('hidden'));
-btnSettingsSave.addEventListener('click', () => { localStorage.setItem('billapp_user_name', settingsNameInput.value.trim()); localStorage.setItem('billapp_venmo_id', settingsVenmoInput.value.trim()); localStorage.setItem('billapp_zelle_id', settingsZelleInput.value.trim()); settingsModal.classList.add('hidden'); showNoticeModal('Profile Saved', ''); loadTrips(); });
+btnSettingsSave.addEventListener('click', () => { 
+    localStorage.setItem('billapp_user_name', settingsNameInput.value.trim()); localStorage.setItem('billapp_venmo_id', settingsVenmoInput.value.trim()); localStorage.setItem('billapp_zelle_id', settingsZelleInput.value.trim()); 
+    settingsModal.classList.add('hidden'); showNoticeModal('Profile Saved', ''); 
+    loadTrips(); setupNotifications(); 
+});
 
 btnSnap.addEventListener('click', () => cameraInput.click()); btnCropCancel.addEventListener('click', () => { cropModal.classList.add('hidden'); if (cropper) cropper.destroy(); cameraInput.value = ''; });
 cameraInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { cropImage.src = e.target.result; cropModal.classList.remove('hidden'); if (cropper) cropper.destroy(); cropper = new Cropper(cropImage, { viewMode: 1, dragMode: 'crop', autoCropArea: 0.8, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false }); }; reader.readAsDataURL(file); });

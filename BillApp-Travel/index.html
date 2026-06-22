@@ -13,7 +13,7 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <link rel="stylesheet" href="../shared/core-ui.css">
-    <link rel="stylesheet" href="style.css?v=39.0">
+    <link rel="stylesheet" href="style.css?v=40.0">
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
@@ -26,6 +26,7 @@
 <body ontouchstart="">
     <input type="file" id="camera-input" accept="image/*" style="display: none;">
 
+    <!-- 📱 PAGE 1: UNIFIED HOME -->
     <div id="page-home" class="app-page active">
         <div class="header-section">
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -41,7 +42,6 @@
                     </button>
                     <div id="notification-badge" style="position: absolute; top: -2px; right: -2px; background: #FF3B30; color: white; font-size: 0.7rem; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: none; justify-content: center; align-items: center; pointer-events: none; border: 2px solid var(--bg-main);">0</div>
                 </div>
-
                 <button class="profile-settings-btn" id="btn-open-join" style="position: static; width: 44px; height: 44px; color: var(--accent-blue); border-color: rgba(125, 211, 252, 0.3);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </button>
@@ -58,6 +58,7 @@
         </div>
     </div>
 
+    <!-- 📱 PAGE 2: TRIP LEDGER -->
     <div id="page-trip" class="app-page">
         <div class="header-section">
             <button id="btn-back-home" class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
@@ -70,6 +71,7 @@
         <div class="fab-container"><button id="fab-trip" class="aperture-btn fab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg></button></div>
     </div>
 
+    <!-- 📱 PAGE 3: SCANNER / ORB -->
     <div id="page-scanner" class="app-page dashboard-container">
         <div style="position: absolute; top: calc(env(safe-area-inset-top) + 20px); left: 20px; z-index: 100;"><button id="btn-cancel-scan" class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>
         <div class="top-section"><button id="btn-snap" class="aperture-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg></button></div>
@@ -87,6 +89,7 @@
         </div>
     </div>
 
+    <!-- 📦 MODALS -->
     <div id="notifications-modal" class="modal-overlay hidden" style="z-index: 9999;">
         <div class="glass-modal-card" style="max-width: 360px; width: 90%; padding: 25px 20px; max-height: 80vh;">
             <h3 class="modal-title" style="margin-bottom: 15px; color: var(--text-main);">Notifications 🔔</h3>
@@ -126,7 +129,7 @@
         <div class="glass-modal-card">
             <h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3>
             <div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;">
-                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V39.0 (Strict Security)</span></div>
+                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V40.0 (God Mode)</span></div>
                 <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span></div>
             </div>
             <div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div>
@@ -208,6 +211,6 @@
         <span>🎉</span> <span id="toast-message">Notification</span>
     </div>
 
-    <script type="module" src="app.js?v=39.0"></script>
+    <script type="module" src="app.js?v=40.0"></script>
 </body>
 </html>
