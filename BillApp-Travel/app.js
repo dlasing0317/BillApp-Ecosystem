@@ -1,5 +1,5 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V40.1 - Gatekeeper)
+// 🌟 FIREBASE SETUP & IMPORT (V41.0 - Scanner Fixes)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, arrayUnion, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -199,27 +199,29 @@ checkInvite();
 // 🌟 Home & Trip Events
 // ==========================================
 document.getElementById('btn-back-home').addEventListener('click', () => { navigateTo('page-home'); });
-document.getElementById('fab-trip').addEventListener('click', () => { navigateTo('page-scanner'); });
+
+// 🌟 V41.0 FIX: 當進入 Scanner 之前，強制更新一次 UI
+document.getElementById('fab-trip').addEventListener('click', () => { 
+    calculateAndRender(); 
+    navigateTo('page-scanner'); 
+});
+
 document.getElementById('btn-cancel-scan').addEventListener('click', () => { navigateTo(currentTripMode ? 'page-trip' : 'page-home'); });
 
 document.querySelectorAll('#paid-by-container').forEach(container => { container.addEventListener('click', function(e) { if(e.target.classList.contains('avatar-bubble')) { container.querySelectorAll('.avatar-bubble').forEach(x => x.classList.remove('active')); e.target.classList.add('active'); } }); });
 document.querySelectorAll('#split-between-container').forEach(container => { container.addEventListener('click', function(e) { if(e.target.classList.contains('checkable')) { e.target.classList.toggle('active'); } }); });
 
 // ==========================================
-// 🌟 TRIP LOGIC (GATEKEEPER ADDED TO + BUTTON)
+// 🌟 TRIP LOGIC 
 // ==========================================
 const btnAddTrip = document.getElementById('btn-add-trip'); const newTripModal = document.getElementById('new-trip-modal'); const btnNewTripCancel = document.getElementById('btn-new-trip-cancel'); const btnNewTripSave = document.getElementById('btn-new-trip-save'); const newTripNameInput = document.getElementById('new-trip-name'); const newTripStartInput = document.getElementById('new-trip-start'); const newTripEndInput = document.getElementById('new-trip-end'); const newMemberInput = document.getElementById('new-member-input'); const btnAddMember = document.getElementById('btn-add-member'); const newTripMembersList = document.getElementById('new-trip-members-list'); const tripModalTitle = document.getElementById('trip-modal-title');
 let currentNewTripMembers = [getCurrentUser()]; 
 function renderNewTripMembers() { newTripMembersList.innerHTML = ''; currentNewTripMembers.forEach(member => { const bubble = document.createElement('div'); bubble.className = 'avatar-bubble'; bubble.style.display = 'flex'; bubble.style.alignItems = 'center'; bubble.innerHTML = `${member} <span class="remove-btn" style="color: #ff4444; margin-left: 8px; font-size: 1.2rem; cursor: pointer; line-height: 1;">×</span>`; bubble.querySelector('.remove-btn').addEventListener('click', () => { currentNewTripMembers = currentNewTripMembers.filter(m => m !== member); renderNewTripMembers(); }); newTripMembersList.appendChild(bubble); }); }
 btnAddMember.addEventListener('click', () => { const name = newMemberInput.value.trim(); if (name && !currentNewTripMembers.includes(name)) { currentNewTripMembers.push(name); newMemberInput.value = ''; renderNewTripMembers(); } }); newMemberInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') btnAddMember.click(); });
 
-// 🌟 V40.1 GATEKEEPER APPLIED HERE
 btnAddTrip.addEventListener('click', () => { 
     const me = getCurrentUser();
-    if (me === 'Guest') {
-        showNoticeModal('Profile Required', 'Please click the profile icon (top right) and set your Name before creating a trip!');
-        return;
-    }
+    if (me === 'Guest') { showNoticeModal('Profile Required', 'Please click the profile icon (top right) and set your Name before creating a trip!'); return; }
     tripModalTitle.textContent = 'Create New Trip'; newTripNameInput.value = ''; newMemberInput.value = ''; currentNewTripMembers = [me]; renderNewTripMembers(); currentTripId = null; newTripModal.classList.remove('hidden'); 
 });
 
@@ -291,20 +293,7 @@ function updateAssignmentModalMembers(membersArray) {
 }
 
 // ==========================================
-// 🌟 BASIC MANUAL EXPENSE LOGIC
-// ==========================================
-const btnManualAdd = document.getElementById('btn-manual-add'); const basicExpenseModal = document.getElementById('basic-expense-modal'); const btnBasicCancel = document.getElementById('btn-basic-cancel'); const btnBasicSave = document.getElementById('btn-basic-save'); const basicExpenseTitle = document.getElementById('basic-expense-title'); const basicExpenseAmount = document.getElementById('basic-expense-amount'); const basicPaidByContainer = document.getElementById('basic-paid-by-container'); const expenseModalTitle = document.getElementById('expense-modal-title');
-btnManualAdd.addEventListener('click', () => { if (!currentTripId) return; editingExpenseId = null; expenseModalTitle.textContent = 'Add Expense'; basicExpenseTitle.value = ''; basicExpenseAmount.value = ''; const originalPaidBy = document.getElementById('paid-by-container').innerHTML; basicPaidByContainer.innerHTML = originalPaidBy; basicPaidByContainer.querySelectorAll('.avatar-bubble').forEach(bubble => { bubble.addEventListener('click', function() { basicPaidByContainer.querySelectorAll('.avatar-bubble').forEach(x => x.classList.remove('active')); this.classList.add('active'); }); }); basicExpenseModal.classList.remove('hidden'); });
-btnBasicCancel.addEventListener('click', () => { basicExpenseModal.classList.add('hidden'); });
-btnBasicSave.addEventListener('click', async () => {
-    const title = basicExpenseTitle.value.trim() || 'Untitled Expense'; const amount = parseFloat(basicExpenseAmount.value); if (isNaN(amount) || amount <= 0) { showNoticeModal('Error', '大佬，打返個有效嘅銀碼先啦！'); return; }
-    const activePayer = basicPaidByContainer.querySelector('.avatar-bubble.active'); const payerName = activePayer ? activePayer.textContent.trim() : 'Unknown'; const allMembers = Array.from(basicPaidByContainer.querySelectorAll('.avatar-bubble')).map(b => b.textContent.trim()); const splitCount = allMembers.length || 1;
-    btnBasicSave.disabled = true; btnBasicSave.textContent = 'Saving...'; const expenseData = { title: title, amount: amount, paidBy: payerName, splitBetween: allMembers, splitCount: splitCount, createdAt: new Date().toISOString() };
-    try { if (editingExpenseId) { await updateDoc(doc(db, `trips/${currentTripId}/expenses`, editingExpenseId), expenseData); } else { await addDoc(collection(db, `trips/${currentTripId}/expenses`), expenseData); } basicExpenseModal.classList.add('hidden'); loadExpenses(currentTripId); } catch (e) { showNoticeModal('Error', 'Save error'); } finally { btnBasicSave.disabled = false; btnBasicSave.textContent = 'Save'; }
-});
-
-// ==========================================
-// 🌟 SCANNER / OCR / ORB LOGIC
+// 🌟 SCANNER / OCR / ORB LOGIC (V41.0 - UI Fixes)
 // ==========================================
 const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-next'); const btnDone = document.getElementById('btn-done'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const taxLabel = document.getElementById('tax-label'); const btnSettings = document.getElementById('btn-settings'); const settingsModal = document.getElementById('settings-modal'); const settingsNameInput = document.getElementById('settings-name-input'); const settingsVenmoInput = document.getElementById('settings-venmo-input'); const settingsZelleInput = document.getElementById('settings-zelle-input'); const btnSettingsSave = document.getElementById('btn-settings-save'); const btnSettingsCancel = document.getElementById('btn-settings-cancel');
 const btnInfo = document.getElementById('btn-info'); const infoModal = document.getElementById('info-modal'); const btnInfoClose = document.getElementById('btn-info-close'); const debugEnv = document.getElementById('debug-env');
@@ -314,14 +303,47 @@ if (btnInfo && infoModal && btnInfoClose) { btnInfo.addEventListener('click', tr
 const assignmentModal = document.getElementById('assignment-modal'); const btnAssignmentCancel = document.getElementById('btn-assignment-cancel'); const btnAssignmentSave = document.getElementById('btn-assignment-save'); const expenseTitleInput = document.getElementById('expense-title'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image'); const btnCropCancel = document.getElementById('btn-crop-cancel'); const btnCropConfirm = document.getElementById('btn-crop-confirm');
 let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let lastScannedImageFile = null; let globalTipValue = 5; let globalSplitValue = 1;
 
+// 🌟 V41.0 FIX: Context-Aware Scanner UI Calculation
 function calculateAndRender() {
     const sub = parseFloat(manualSubtotalInput.value) || 0; const tax = parseFloat(manualTaxInput.value) || 0; scannedSubtotal = sub; scannedTax = tax;
     if (sub > 0 && tax > 0) { const taxPercent = (tax / sub) * 100; taxLabel.textContent = `Tax (${taxPercent.toFixed(1)}%)`; } else { taxLabel.textContent = 'Tax'; }
-    const tipAmount = scannedSubtotal * (globalTipValue / 100); currentGrandTotal = scannedSubtotal + scannedTax + tipAmount; currentPerPerson = currentGrandTotal / globalSplitValue;     
-    const displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentPerPerson.toFixed(2)}`; perPersonAmountDisplay.textContent = displayStr;
-    const textLen = displayStr.length; if (textLen > 8) { perPersonAmountDisplay.style.fontSize = '2.8rem'; } else if (textLen > 6) { perPersonAmountDisplay.style.fontSize = '3.5rem'; } else { perPersonAmountDisplay.style.fontSize = '4.5rem'; }
+    
+    const tipAmount = scannedSubtotal * (globalTipValue / 100); 
+    currentGrandTotal = scannedSubtotal + scannedTax + tipAmount; 
+    currentPerPerson = currentGrandTotal / globalSplitValue;     
+    
+    // Update the Breakdown UI
+    const summaryTipLabel = document.getElementById('summary-tip-label');
+    const summaryTipVal = document.getElementById('summary-tip-val');
+    const summaryTotalVal = document.getElementById('summary-total-val');
+    if (summaryTipLabel) summaryTipLabel.textContent = `Tip (${globalTipValue}%)`;
+    if (summaryTipVal) summaryTipVal.textContent = `$${tipAmount.toFixed(2)}`;
+    if (summaryTotalVal) summaryTotalVal.textContent = `$${currentGrandTotal.toFixed(2)}`;
+
+    // Context Aware Layout adjustments
+    const splitContainer = document.getElementById('split-dial-container');
+    const orbLabel = document.getElementById('orb-dynamic-label');
+    let displayStr = '$0.00';
+
+    if (currentTripMode) {
+        if(splitContainer) splitContainer.style.display = 'none'; // Hide Split Dial
+        if(orbLabel) orbLabel.textContent = 'TOTAL AMOUNT';
+        displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentGrandTotal.toFixed(2)}`;
+    } else {
+        if(splitContainer) splitContainer.style.display = 'flex'; // Show Split Dial
+        if(orbLabel) orbLabel.textContent = 'PER PERSON';
+        displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentPerPerson.toFixed(2)}`;
+    }
+
+    perPersonAmountDisplay.textContent = displayStr;
+    const textLen = displayStr.length; 
+    if (textLen > 8) { perPersonAmountDisplay.style.fontSize = '2.8rem'; } 
+    else if (textLen > 6) { perPersonAmountDisplay.style.fontSize = '3.5rem'; } 
+    else { perPersonAmountDisplay.style.fontSize = '4.5rem'; }
+    
     currentGrandTotal > 0 ? resultOrb.classList.remove('inactive') : resultOrb.classList.add('inactive');
 }
+
 manualSubtotalInput.addEventListener('input', function() { autoResizeInput(this); calculateAndRender(); }); manualTaxInput.addEventListener('input', function() { autoResizeInput(this); calculateAndRender(); });
 
 function setupCircularDial(wrapperId, ringId, thumbId, displayId, min, max, step, initialValue, isPercent, onChangeCallback) {
