@@ -1,8 +1,7 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V37.4)
+// 🌟 FIREBASE SETUP & IMPORT (V38.0)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-// 🌟 Added 'onSnapshot' for real-time Admin notifications
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, arrayUnion, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { autoResizeInput, showNoticeModal, showConfirmModal, initConfirmModal, setupSwipeActions } from '../shared/core-ui.js';
@@ -16,58 +15,77 @@ const getCurrentUser = () => { const name = localStorage.getItem('billapp_user_n
 let currentTripMode = null; let currentTripId = null; let currentTripData = null; let editingExpenseId = null; 
 function navigateTo(pageId) { document.querySelectorAll('.app-page').forEach(p => p.classList.remove('active')); document.getElementById(pageId).classList.add('active'); }
 
-// 🌟 Toast Notification Function
 function showToast(msg) {
-    const toast = document.getElementById('toast-notification');
-    const toastMsg = document.getElementById('toast-message');
-    if(!toast) return;
-    toastMsg.textContent = msg;
+    const toast = document.getElementById('toast-notification'); const toastMsg = document.getElementById('toast-message');
+    if(!toast) return; toastMsg.textContent = msg;
     toast.classList.remove('toast-hidden'); toast.classList.add('toast-visible');
     setTimeout(() => { toast.classList.remove('toast-visible'); toast.classList.add('toast-hidden'); }, 4000);
 }
 
 // ==========================================
-// 🌟 FIREBASE REAL-TIME FETCHING (onSnapshot)
+// 🌟 NOTIFICATIONS SYSTEM (V38.0 New)
 // ==========================================
-let knownTripMembers = {}; 
+window.currentUnreadNotifs = [];
 
-function loadTrips() {
-    const tripList = document.getElementById('trip-list-container'); 
-    const me = getCurrentUser();
-    const q = query(collection(db, "trips"), orderBy("createdAt", "desc"));
+function setupNotifications() {
+    const me = getCurrentUser(); if (me === 'Guest') return;
     
-    // 🌟 Upgrade: Real-time listener instead of one-time fetch
+    // We avoid orderBy here to prevent forcing Firebase composite indexes for now. Sorting is done in JS.
+    const q = query(collection(db, "notifications"), where("targetUser", "==", me));
+    
     onSnapshot(q, (snapshot) => {
-        tripList.innerHTML = ''; 
-        let hasTrips = false;
+        const notifList = document.getElementById('notification-list');
+        const badge = document.getElementById('notification-badge');
         
-        // 🌟 Admin Notification Logic
-        snapshot.docChanges().forEach((change) => {
-            const data = change.doc.data();
-            const docId = change.doc.id;
-            
-            if (change.type === "added") { knownTripMembers[docId] = data.members || []; }
-            if (change.type === "modified") {
-                const oldMembers = knownTripMembers[docId] || [];
-                const newMembers = data.members || [];
-                
-                // If I am the owner, and member list grew -> Send Toast!
-                if (data.owner === me && newMembers.length > oldMembers.length) {
-                    const newPeeps = newMembers.filter(x => !oldMembers.includes(x));
-                    if (newPeeps.length > 0 && newPeeps[0] !== me) {
-                        showToast(`${newPeeps.join(', ')} joined "${data.name}"!`);
-                    }
-                }
-                knownTripMembers[docId] = newMembers;
-                
-                // Live update the current view if we are inside the trip
-                if (currentTripId === docId) {
-                    currentTripData = data;
-                    updateAssignmentModalMembers(data.members);
-                }
-            }
+        let docsArr = [];
+        snapshot.forEach(d => docsArr.push({id: d.id, ...d.data()}));
+        // Sort descending locally
+        docsArr.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        notifList.innerHTML = '';
+        let unreadCount = 0;
+        window.currentUnreadNotifs = [];
+
+        if (docsArr.length === 0) {
+            notifList.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 20px;">No notifications yet.</div>';
+            badge.style.display = 'none'; return;
+        }
+
+        docsArr.forEach(data => {
+            if (!data.read) { unreadCount++; window.currentUnreadNotifs.push(data.id); }
+            notifList.innerHTML += `
+                <div class="glass-box" style="padding: 12px; opacity: ${data.read ? '0.5' : '1'}; background: ${data.read ? 'transparent' : 'rgba(125, 211, 252, 0.1)'};">
+                    <div style="color: white; font-size: 0.95rem;">${data.message}</div>
+                    <div style="color: var(--text-dim); font-size: 0.75rem; margin-top: 5px;">${new Date(data.createdAt).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</div>
+                </div>`;
         });
 
+        if (unreadCount > 0) {
+            badge.style.display = 'flex'; badge.textContent = unreadCount;
+            // Optionally trigger toast for newest unread if it was just added in the last 10 seconds
+            const latest = docsArr[0];
+            if (!latest.read && (new Date() - new Date(latest.createdAt)) < 10000) { showToast(latest.message); }
+        } else { badge.style.display = 'none'; }
+    });
+}
+
+document.getElementById('btn-notifications').addEventListener('click', () => {
+    document.getElementById('notifications-modal').classList.remove('hidden');
+    // Mark as read in Firebase
+    window.currentUnreadNotifs.forEach(id => { updateDoc(doc(db, "notifications", id), { read: true }); });
+    window.currentUnreadNotifs = []; document.getElementById('notification-badge').style.display = 'none';
+});
+document.getElementById('btn-notifications-close').addEventListener('click', () => { document.getElementById('notifications-modal').classList.add('hidden'); });
+
+// ==========================================
+// 🌟 FIREBASE TRIPS FETCHING
+// ==========================================
+function loadTrips() {
+    const tripList = document.getElementById('trip-list-container'); const me = getCurrentUser();
+    const q = query(collection(db, "trips"), orderBy("createdAt", "desc"));
+    
+    onSnapshot(q, (snapshot) => {
+        tripList.innerHTML = ''; let hasTrips = false;
         if (snapshot.empty) { tripList.innerHTML = '<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">No Trips yet. Click + to create.</div>'; return; }
         
         snapshot.forEach((docSnap) => {
@@ -75,12 +93,9 @@ function loadTrips() {
             if (tripOwner === me || (data.members && data.members.includes(me))) { renderTripCard(docSnap.id, data); hasTrips = true; }
         });
         if (!hasTrips) tripList.innerHTML = `<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">You haven't joined any trips yet. Click the 🤝 icon to join.</div>`;
-    }, (error) => {
-        tripList.innerHTML = '<div style="text-align: center; color: #ff4444; margin-top: 20px;">Failed to load trips.</div>';
-    });
+    }, (error) => { tripList.innerHTML = '<div style="text-align: center; color: #ff4444; margin-top: 20px;">Failed to load trips.</div>'; });
 }
 
-// Keep expenses as one-time fetch for now to save reads, unless you want them live too
 async function loadExpenses(tripId) {
     const timeline = document.getElementById('trip-timeline'); timeline.innerHTML = '<div class="glass-box" style="margin-bottom: 15px; opacity: 0.5;"><div style="text-align: center; color: var(--text-dim); font-size: 0.9rem;">Start of trip timeline</div></div>';
     try {
@@ -112,75 +127,51 @@ async function loadExpenses(tripId) {
 // ==========================================
 // 🌟 AUTO-MERGE & JOIN LOGIC
 // ==========================================
-const joinModal = document.getElementById('join-trip-modal');
-const btnOpenJoin = document.getElementById('btn-open-join');
-const btnJoinCancel = document.getElementById('btn-join-cancel');
-const btnJoinSubmit = document.getElementById('btn-join-submit');
-const joinCodeInput = document.getElementById('join-code-input');
+const joinModal = document.getElementById('join-trip-modal'); const btnOpenJoin = document.getElementById('btn-open-join'); const btnJoinCancel = document.getElementById('btn-join-cancel'); const btnJoinSubmit = document.getElementById('btn-join-submit'); const joinCodeInput = document.getElementById('join-code-input');
 
-btnOpenJoin.addEventListener('click', () => {
-    const me = getCurrentUser();
-    if (me === 'Guest') { showNoticeModal('Profile Required', 'Please set your Name in settings first!'); return; }
-    joinCodeInput.value = ''; joinModal.classList.remove('hidden');
-});
+btnOpenJoin.addEventListener('click', () => { const me = getCurrentUser(); if (me === 'Guest') { showNoticeModal('Profile Required', 'Please set your Name in settings first!'); return; } joinCodeInput.value = ''; joinModal.classList.remove('hidden'); });
 btnJoinCancel.addEventListener('click', () => { joinModal.classList.add('hidden'); });
 
 btnJoinSubmit.addEventListener('click', async () => {
-    const inviteCode = joinCodeInput.value.trim();
-    if (!inviteCode) { showNoticeModal('Error', 'Please enter a code.'); return; }
-    let me = getCurrentUser();
-    
-    btnJoinSubmit.textContent = 'Checking...'; btnJoinSubmit.disabled = true;
+    const inviteCode = joinCodeInput.value.trim(); if (!inviteCode) { showNoticeModal('Error', 'Please enter a code.'); return; }
+    let me = getCurrentUser(); btnJoinSubmit.textContent = 'Checking...'; btnJoinSubmit.disabled = true;
     try {
-        const q = query(collection(db, "trips"), where("joinCode", "==", inviteCode));
-        const querySnapshot = await getDocs(q);
-        let tripDocRef = null; let tData = null;
-
+        const q = query(collection(db, "trips"), where("joinCode", "==", inviteCode)); const querySnapshot = await getDocs(q); let tripDocRef = null; let tData = null;
         if (!querySnapshot.empty) { tripDocRef = querySnapshot.docs[0].ref; tData = querySnapshot.docs[0].data(); }
         else { try { const docSnap = await getDoc(doc(db, "trips", inviteCode)); if (docSnap.exists()) { tripDocRef = docSnap.ref; tData = docSnap.data(); } } catch(err) { } }
 
         if (tripDocRef && tData) {
-            const existingMembers = tData.members || [];
-            const lowerMe = me.toLowerCase().replace(/\s+/g, '');
-            let matchedName = null;
-            
-            // 🌟 Auto-Merge Logic (Case & Space Insensitive)
+            const existingMembers = tData.members || []; const lowerMe = me.toLowerCase().replace(/\s+/g, ''); let matchedName = null;
             existingMembers.forEach(m => { if (m.toLowerCase().replace(/\s+/g, '') === lowerMe) matchedName = m; });
 
             if (matchedName) {
-                // Force sync their local profile to match the official trip casing
-                localStorage.setItem('billapp_user_name', matchedName);
-                document.getElementById('settings-name-input').value = matchedName;
+                localStorage.setItem('billapp_user_name', matchedName); document.getElementById('settings-name-input').value = matchedName;
                 showNoticeModal('Welcome Back!', `You are recognized as "${matchedName}" in "${tData.name}".`);
             } else {
                 await updateDoc(tripDocRef, { members: arrayUnion(me) });
+                // 🌟 WRITE NOTIFICATION TO FIREBASE
+                if (tData.owner && tData.owner !== me) {
+                    await addDoc(collection(db, "notifications"), { targetUser: tData.owner, message: `🎉 ${me} joined your trip "${tData.name}"!`, read: false, createdAt: new Date().toISOString() });
+                }
                 showNoticeModal('Success', `You have successfully joined "${tData.name}"!`);
             }
             joinModal.classList.add('hidden');
         } else { showNoticeModal('Error', 'Invalid Trip Code. Please check and try again.'); }
-    } catch (e) { showNoticeModal('Error', 'Network error.'); } 
-    finally { btnJoinSubmit.textContent = 'Join'; btnJoinSubmit.disabled = false; }
+    } catch (e) { showNoticeModal('Error', 'Network error.'); } finally { btnJoinSubmit.textContent = 'Join'; btnJoinSubmit.disabled = false; }
 });
 
-// URL Auto-Join Logic (Also uses Auto-Merge)
 async function checkInvite() {
     const urlParams = new URLSearchParams(window.location.search); const inviteCode = urlParams.get('invite');
     if (inviteCode) {
         let me = getCurrentUser(); if (me === 'Guest') { showNoticeModal('Setup Profile Required', 'Please click the profile icon (top right) and enter your Name before joining a trip!'); return; }
         try {
-            const q = query(collection(db, "trips"), where("joinCode", "==", inviteCode));
-            const querySnapshot = await getDocs(q);
-            let tripDocRef = null; let tData = null;
-
+            const q = query(collection(db, "trips"), where("joinCode", "==", inviteCode)); const querySnapshot = await getDocs(q); let tripDocRef = null; let tData = null;
             if (!querySnapshot.empty) { tripDocRef = querySnapshot.docs[0].ref; tData = querySnapshot.docs[0].data(); }
             else { try { const docSnap = await getDoc(doc(db, "trips", inviteCode)); if (docSnap.exists()) { tripDocRef = docSnap.ref; tData = docSnap.data(); } } catch(err) {} }
 
             if (tripDocRef && tData) {
-                const existingMembers = tData.members || [];
-                const lowerMe = me.toLowerCase().replace(/\s+/g, '');
-                let matchedName = null;
+                const existingMembers = tData.members || []; const lowerMe = me.toLowerCase().replace(/\s+/g, ''); let matchedName = null;
                 existingMembers.forEach(m => { if (m.toLowerCase().replace(/\s+/g, '') === lowerMe) matchedName = m; });
-
                 if (matchedName) { 
                     localStorage.setItem('billapp_user_name', matchedName); document.getElementById('settings-name-input').value = matchedName;
                     window.history.replaceState({}, document.title, window.location.pathname); 
@@ -190,6 +181,10 @@ async function checkInvite() {
                     inviteModal.classList.remove('hidden');
                     document.getElementById('btn-invite-accept').onclick = async () => {
                         document.getElementById('btn-invite-accept').textContent = 'Joining...'; await updateDoc(tripDocRef, { members: arrayUnion(me) });
+                        // 🌟 WRITE NOTIFICATION TO FIREBASE
+                        if (tData.owner && tData.owner !== me) {
+                            await addDoc(collection(db, "notifications"), { targetUser: tData.owner, message: `🎉 ${me} joined your trip "${tData.name}"!`, read: false, createdAt: new Date().toISOString() });
+                        }
                         inviteModal.classList.add('hidden'); showNoticeModal('Success', 'You have joined the trip!'); window.history.replaceState({}, document.title, window.location.pathname);
                     };
                     document.getElementById('btn-invite-cancel').onclick = () => { inviteModal.classList.add('hidden'); window.history.replaceState({}, document.title, window.location.pathname); };
@@ -201,6 +196,7 @@ async function checkInvite() {
 
 // Start sequence
 loadTrips();
+setupNotifications();
 checkInvite();
 
 // ==========================================
