@@ -12,8 +12,12 @@
     <title>TripSplit</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    
     <link rel="stylesheet" href="../shared/core-ui.css">
-    <link rel="stylesheet" href="style.css?v=41.0">
+    
+    <link rel="stylesheet" href="../shared/scanner-ui.css">
+    
+    <link rel="stylesheet" href="style.css?v=41.1">
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
@@ -26,7 +30,6 @@
 <body ontouchstart="">
     <input type="file" id="camera-input" accept="image/*" style="display: none;">
 
-    <!-- 📱 PAGE 1: UNIFIED HOME -->
     <div id="page-home" class="app-page active">
         <div class="header-section">
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -58,7 +61,6 @@
         </div>
     </div>
 
-    <!-- 📱 PAGE 2: TRIP LEDGER -->
     <div id="page-trip" class="app-page">
         <div class="header-section">
             <button id="btn-back-home" class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
@@ -71,7 +73,6 @@
         <div class="fab-container"><button id="fab-trip" class="aperture-btn fab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg></button></div>
     </div>
 
-    <!-- 📱 PAGE 3: SCANNER / ORB -->
     <div id="page-scanner" class="app-page dashboard-container">
         <div style="position: absolute; top: calc(env(safe-area-inset-top) + 20px); left: 20px; z-index: 100;"><button id="btn-cancel-scan" class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>
         <div class="top-section"><button id="btn-snap" class="aperture-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg></button></div>
@@ -87,7 +88,6 @@
                     <div class="divider"></div>
                     <div class="input-line"><label id="tax-label">Tax</label><div class="input-with-symbol"><span>$</span><input type="number" id="manual-tax" placeholder="0.00" step="0.01"></div></div>
                     
-                    <!-- 🌟 V41.0 FIX: 補返 BillApp 嘅 Tip 同 Total 明細 -->
                     <div class="divider"></div>
                     <div class="input-line"><label id="summary-tip-label">Tip (5%)</label><div style="text-align: right; color: var(--text-main); font-size: 1.1rem;" id="summary-tip-val">$0.00</div></div>
                     <div class="divider"></div>
@@ -95,13 +95,12 @@
                 </div>
             </div>
             <div class="actions-panel">
-                <div class="action-wrapper"><button class="action-circle-btn share-btn" id="btn-next" style="color: var(--accent-blue); border-color: var(--accent-blue);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button></div>
+                <div class="action-wrapper"><button class="action-circle-btn share-btn" id="btn-next"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button></div>
                 <div class="action-wrapper"><button class="action-circle-btn done-btn" id="btn-done"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button></div>
             </div>
         </div>
     </div>
 
-    <!-- 📦 MODALS -->
     <div id="notifications-modal" class="modal-overlay hidden" style="z-index: 9999;">
         <div class="glass-modal-card" style="max-width: 360px; width: 90%; padding: 25px 20px; max-height: 80vh;">
             <h3 class="modal-title" style="margin-bottom: 15px; color: var(--text-main);">Notifications 🔔</h3>
@@ -141,7 +140,7 @@
         <div class="glass-modal-card">
             <h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3>
             <div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;">
-                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V41.0 (Scanner UI Fix)</span></div>
+                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V41.1</span></div>
                 <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span></div>
             </div>
             <div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div>
@@ -223,6 +222,6 @@
         <span>🎉</span> <span id="toast-message">Notification</span>
     </div>
 
-    <script type="module" src="app.js?v=41.0"></script>
+    <script type="module" src="app.js?v=41.1"></script>
 </body>
 </html>

@@ -1,0 +1,101 @@
+/* ==========================================
+   🌟 SHARED SCANNER UI (Ecosystem-wide)
+   包含：3D 玻璃球、發光轉盤、掃描按鈕、底部動作圓掣
+   ========================================== */
+
+/* 1️⃣ 3D Glossy Orb (黑球立體感) */
+.result-orb {
+    width: 220px !important;
+    height: 220px !important;
+    border-radius: 50%;
+    /* 重現深邃嘅立體反光漸變 */
+    background: radial-gradient(circle at 50% 15%, #3b4252 0%, #0b0f19 70%, #000000 100%) !important;
+    /* 加入外圍光暈 + 頂部內高光 + 底部內陰影 */
+    box-shadow: 0 0 40px rgba(125, 211, 252, 0.12), 
+                inset 0 4px 10px rgba(255, 255, 255, 0.25), 
+                inset 0 -4px 20px rgba(0, 0, 0, 0.9) !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 20px auto;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* 2️⃣ Glowing Dials (轉盤發光點) */
+.dial-thumb {
+    fill: #ffffff !important;
+    /* 白點發光效果 */
+    filter: drop-shadow(0px 0px 5px rgba(255, 255, 255, 0.9)) !important;
+}
+.dial-progress {
+    stroke: var(--accent-blue) !important;
+    stroke-width: 4;
+    stroke-linecap: round;
+    fill: none;
+    /* 藍色進度條發光 */
+    filter: drop-shadow(0px 0px 4px rgba(125, 211, 252, 0.5)) !important;
+}
+.dial-bg {
+    stroke: rgba(255, 255, 255, 0.08) !important;
+    stroke-width: 4;
+    fill: none;
+}
+
+/* 3️⃣ Top Aperture Button Glow (頂部光圈相機掣) */
+#btn-snap.aperture-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #111520;
+    border: 2px solid var(--accent-blue);
+    color: var(--accent-blue);
+    box-shadow: 0 0 15px rgba(125, 211, 252, 0.4), inset 0 0 10px rgba(125, 211, 252, 0.2) !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+}
+
+/* 4️⃣ Perfect Circle Action Buttons (底部按鈕變回正圓形) */
+.actions-panel {
+    display: flex;
+    justify-content: center;
+    gap: 25px !important;
+    margin-top: 15px;
+    padding-bottom: 20px;
+}
+.action-circle-btn {
+    width: 64px !important;
+    height: 64px !important;
+    border-radius: 50% !important; /* 強制變回圓形 */
+    background: #111520 !important;
+    border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3) !important;
+    cursor: pointer;
+    padding: 0 !important; /* 清除 Pill Shape 嘅 padding */
+}
+
+/* 底部按鈕顏色特化 */
+.action-circle-btn.share-btn {
+    border-color: rgba(125, 211, 252, 0.5) !important;
+    color: var(--accent-blue) !important;
+}
+.action-circle-btn.done-btn {
+    border-color: rgba(125, 211, 252, 0.5) !important;
+    color: var(--accent-blue) !important;
+    background: rgba(125, 211, 252, 0.1) !important;
+}
+
+/* 5️⃣ Clean up the breakdown panel (微調玻璃框內距) */
+.manual-panel .glass-box {
+    padding: 15px 20px !important;
+}
+.manual-panel .input-line label {
+    font-size: 0.95rem;
+    color: var(--text-dim);
+}

@@ -1,6 +1,7 @@
 /* ==========================================
    📸 BillApp-Scanner 專屬樣式 (style.css)
-   (已移除全域及 Modal 樣式，統一由 shared/core-ui.css 管理)
+   (全域樣式 -> shared/core-ui.css)
+   (掃描器 3D/發光外觀 -> shared/scanner-ui.css)
    ========================================== */
 
 button, input, .dial-svg-wrapper, .action-circle-btn, svg {
@@ -40,6 +41,7 @@ button, input, .dial-svg-wrapper, .action-circle-btn, svg {
     align-items: center;
 }
 
+/* 保留 Aperture Button 嘅獨立大細同動畫 (因為 Standalone 版粒掣特別大) */
 .aperture-btn {
     width: clamp(90px, 12vh, 120px);
     height: clamp(90px, 12vh, 120px);
@@ -86,9 +88,10 @@ button, input, .dial-svg-wrapper, .action-circle-btn, svg {
 .dial-svg-wrapper:active { cursor: grabbing; }
 
 .dial-svg-wrapper svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(135deg); overflow: visible; pointer-events: none; }
-.dial-bg { fill: none; stroke: var(--track-color); stroke-width: 10; }
-.dial-progress { fill: none; stroke: var(--accent-blue); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.05s linear; filter: drop-shadow(0 0 10px var(--accent-glow)); }
-.dial-thumb { fill: #FFF; filter: drop-shadow(0 0 5px #FFF); transition: cx 0.05s linear, cy 0.05s linear; }
+
+/* 🌟 已精簡：顏色、發光、邊框已經交畀 shared/scanner-ui.css，呢度只保留邏輯動畫 */
+.dial-progress { transition: stroke-dashoffset 0.05s linear; }
+.dial-thumb { transition: cx 0.05s linear, cy 0.05s linear; }
 
 .dial-inner-content { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; pointer-events: none; }
 .dial-inner-label { font-size: 0.75rem; color: var(--text-dim); letter-spacing: 1px; margin-bottom: -2px; text-transform: uppercase; }
@@ -101,18 +104,10 @@ button, input, .dial-svg-wrapper, .action-circle-btn, svg {
     width: 100%;
 }
 
+/* 🌟 已精簡：3D特效交畀 shared/scanner-ui.css，呢度只保留結構 */
 .result-orb {
-    width: clamp(180px, 24vh, 230px);
-    height: clamp(180px, 24vh, 230px);
-    border-radius: 50%;
-    background: radial-gradient(circle at 50% 100%, #151A24 0%, #080A0F 100%);
-    border: 1px solid rgba(125, 211, 252, 0.2);
-    display: flex;
-    justify-content: center;
-    align-items: center;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 0 40px rgba(125, 211, 252, 0.15), inset 0 2px 5px rgba(255, 255, 255, 0.2), inset 0 -20px 40px rgba(0, 0, 0, 0.9);
     transition: all 0.3s;
 }
 
@@ -147,10 +142,9 @@ button, input, .dial-svg-wrapper, .action-circle-btn, svg {
 .input-with-symbol input[type=number]::-webkit-inner-spin-button, .input-with-symbol input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .divider { height: 1px; background: rgba(255,255,255,0.05); width: 100%; }
 
-.actions-panel { display: flex; flex-direction: row; justify-content: space-around; width: 100%; padding: 0 10px; }
+/* 🌟 已精簡：動作按鈕嘅樣式交畀 shared/scanner-ui.css，呢度只保留點擊特效 */
 .action-wrapper { width: 190px; display: flex; justify-content: center; align-items: center; }
-
-.action-circle-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: var(--text-dim); transition: all 0.2s; background: radial-gradient(circle at 50% 0%, #1A283B 0%, #0F172A 100%); border: 2px solid var(--track-color); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.action-circle-btn { transition: all 0.2s; }
 .action-circle-btn:active { transform: scale(0.9); border-color: var(--accent-blue); box-shadow: 0 0 20px var(--accent-glow), inset 0 2px 5px rgba(255,255,255,0.2); color: var(--accent-blue); }
 
 .modal-content div[style*="background: #f4f7fb"] { background: #0A0C10 !important; border: 1px solid #2A2E38 !important; border-radius: 12px;}
