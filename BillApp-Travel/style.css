@@ -149,3 +149,90 @@
 .crop-btn { padding: 12px 30px; border-radius: 25px; font-weight: bold; font-size: 1rem; border: none; }
 .crop-btn.cancel { background: rgba(255,255,255,0.2); color: white; }
 .crop-btn.confirm { background: var(--accent-blue); color: black; }
+
+
+/* ==========================================
+   🌟 V42.0: Paintbrush Mode (Itemized Split) UI
+   ========================================== */
+
+/* 頂部人頭 Dock */
+.avatar-dock {
+    display: flex;
+    gap: 15px;
+    padding: 10px 5px 15px 5px;
+    overflow-x: auto;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    scrollbar-width: none; /* 隱藏 scrollbar */
+}
+.avatar-dock::-webkit-scrollbar { display: none; }
+
+/* 畫筆 (未選中) */
+.dock-avatar {
+    min-width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #2A2E38;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    opacity: 0.5;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+/* 畫筆 (已選中 - 發光狀態) */
+.dock-avatar.active-brush {
+    background: var(--accent-blue);
+    color: #000;
+    opacity: 1;
+    border: 2px solid white;
+    transform: scale(1.15) translateY(-5px);
+    box-shadow: 0 10px 20px rgba(125, 211, 252, 0.4);
+}
+
+/* 底部 Item Row */
+.item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.25);
+    padding: 12px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.2s;
+    cursor: pointer;
+}
+.item-row:active {
+    background: rgba(125, 211, 252, 0.1);
+}
+
+/* 印上去嘅迷你頭像 */
+.assigned-avatars-container {
+    display: flex;
+    flex-direction: row-reverse; /* 新加入嘅頭像疊喺上面 */
+    gap: -10px; /* 頭像重疊效果 */
+}
+.mini-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent-blue);
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    border: 2px solid #111520; /* 扮穿透邊框 */
+    margin-left: -12px; /* 負數 margin 做到重疊 */
+    box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes popIn {
+    0% { transform: scale(0); }
+    100% { transform: scale(1); }
+}
