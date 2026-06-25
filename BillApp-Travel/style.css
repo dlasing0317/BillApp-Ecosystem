@@ -1,3 +1,8 @@
+/* 🌟 終極防重疊 (強制隱藏非活動頁面) */
+.app-page:not(.active) {
+    display: none !important;
+}
+
 /* ==========================================
    📸 BillApp-Scanner 專屬樣式 (style.css)
    (已移除全域及 Modal 樣式，統一由 shared/core-ui.css 管理)
