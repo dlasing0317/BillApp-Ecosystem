@@ -1,5 +1,5 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V42.1)
+// 🌟 FIREBASE SETUP & IMPORT (V42.3 - Clean Slate)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -182,46 +182,61 @@ document.getElementById('btn-basic-save').addEventListener('click', async () => 
 });
 
 // ==========================================
-// 🌟 SCANNER / ORB LOGIC (V42.1)
+// 🌟 SCANNER / ORB LOGIC (V42.3)
 // ==========================================
 const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-next'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const assignmentModal = document.getElementById('assignment-modal'); const expenseTitleInput = document.getElementById('expense-title'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image');
 let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 5; let globalSplitValue = 1;
 
-// 🌟 V42.1 DUAL-MODE TOGGLE 
+// 🌟 V42.3 真・OCR 儲存庫
+let globalParsedItems = []; 
+
+// 🌟 V42.3 強化版智能收據解析器
+function parseReceiptItems(text) {
+    const lines = text.split('\n');
+    const items = [];
+    let idCounter = 1;
+    // 過濾無關字眼，加入 'description', 'price', 'dine-in', 'yumee' 防古惑
+    const ignoreWords = ['subtotal', 'tax', 'total', 'tip', 'change', 'cash', 'visa', 'mastercard', 'amex', 'due', 'balance', 'guest', 'table', 'terminal', 'inv#', 'description', 'price', 'dine-in', 'yumee'];
+
+    lines.forEach(line => {
+        const cleanLine = line.trim();
+        if (!cleanLine) return;
+        const lowerLine = cleanLine.toLowerCase();
+        if (ignoreWords.some(word => lowerLine.includes(word))) return;
+
+        const priceRegex = /(?:\$?\s*)(\d{1,4}(?:,\d{3})*\.\d{2})(?!\d)/;
+        const match = cleanLine.match(priceRegex);
+
+        if (match) {
+            const priceVal = parseFloat(match[1].replace(',', ''));
+            // 防 OCR 亂入天文數字，只入 $500 樓下嘅嘢食
+            if (priceVal > 0 && priceVal < 500) {
+                let name = cleanLine.replace(match[0], '').trim();
+                name = name.replace(/^(\d+\s*x?\s*)/i, '').trim(); // 移走 '1 ' 或者 '1x '
+                name = name.replace(/^[^\w\s]+/g, '').trim(); 
+                if (name.length > 2) {
+                    items.push({ id: 'item_' + idCounter++, name: name, price: priceVal, assignedTo: [] });
+                }
+            }
+        }
+    });
+    return items;
+}
+
 let isItemizedMode = false;
-const btnModeSimple = document.getElementById('btn-mode-simple');
-const btnModeItemized = document.getElementById('btn-mode-itemized');
-const modeSlider = document.getElementById('mode-slider');
+const btnModeSimple = document.getElementById('btn-mode-simple'); const btnModeItemized = document.getElementById('btn-mode-itemized'); const modeSlider = document.getElementById('mode-slider');
 
 function updateScannerModeUI() {
-    if (isItemizedMode) {
-        modeSlider.style.transform = 'translateX(100%)';
-        btnModeSimple.style.color = 'var(--text-dim)';
-        btnModeItemized.style.color = '#000';
-    } else {
-        modeSlider.style.transform = 'translateX(0)';
-        btnModeSimple.style.color = '#000';
-        btnModeItemized.style.color = 'var(--text-dim)';
-    }
+    if (isItemizedMode) { modeSlider.style.transform = 'translateX(100%)'; btnModeSimple.style.color = 'var(--text-dim)'; btnModeItemized.style.color = '#000'; } 
+    else { modeSlider.style.transform = 'translateX(0)'; btnModeSimple.style.color = '#000'; btnModeItemized.style.color = 'var(--text-dim)'; }
     calculateAndRender();
 }
 
 if(btnModeSimple && btnModeItemized) {
-    btnModeSimple.addEventListener('click', () => { 
-        isItemizedMode = false; 
-        updateScannerModeUI(); 
-        document.getElementById('itemized-modal').classList.add('hidden'); // 確保 modal 關閉
-    });
-    
+    btnModeSimple.addEventListener('click', () => { isItemizedMode = false; updateScannerModeUI(); document.getElementById('itemized-modal').classList.add('hidden'); });
     btnModeItemized.addEventListener('click', () => { 
-        if (currentGrandTotal === 0 || isNaN(currentGrandTotal)) {
-            showNoticeModal('Oops!', '請先掃描單據或手動輸入 Subtotal 啦！');
-            isItemizedMode = false; updateScannerModeUI(); return; 
-        }
-        isItemizedMode = true; 
-        updateScannerModeUI();
-        
-        // 即時彈出 Modal 及 初始化 Paintbrush
+        if (currentGrandTotal === 0 || isNaN(currentGrandTotal)) { showNoticeModal('Oops!', '請先掃描單據或手動輸入 Subtotal 啦！'); isItemizedMode = false; updateScannerModeUI(); return; }
+        isItemizedMode = true; updateScannerModeUI();
         document.getElementById('receipt-subtotal-modal-val').textContent = `$0.00 / $${scannedSubtotal.toFixed(2)}`;
         document.getElementById('itemized-modal').classList.remove('hidden');
         initPaintbrushMode();
@@ -236,15 +251,8 @@ function calculateAndRender() {
     if (document.getElementById('summary-tip-label')) document.getElementById('summary-tip-label').textContent = `Tip (${globalTipValue}%)`; if (summaryTipVal) summaryTipVal.textContent = `$${tipAmount.toFixed(2)}`; if (summaryTotalVal) summaryTotalVal.textContent = `$${currentGrandTotal.toFixed(2)}`;
     
     const splitContainer = document.getElementById('split-dial-container'); const orbLabel = document.getElementById('orb-dynamic-label'); let displayStr = '$0.00';
-    if (isItemizedMode || currentTripMode) {
-        if(splitContainer) { splitContainer.style.opacity = '0.2'; splitContainer.style.pointerEvents = 'none'; }
-        if(orbLabel) orbLabel.textContent = 'RECEIPT TOTAL';
-        displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentGrandTotal.toFixed(2)}`;
-    } else {
-        if(splitContainer) { splitContainer.style.opacity = '1'; splitContainer.style.pointerEvents = 'auto'; }
-        if(orbLabel) orbLabel.textContent = 'PER PERSON';
-        displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentPerPerson.toFixed(2)}`;
-    }
+    if (isItemizedMode || currentTripMode) { if(splitContainer) { splitContainer.style.opacity = '0.2'; splitContainer.style.pointerEvents = 'none'; } if(orbLabel) orbLabel.textContent = 'RECEIPT TOTAL'; displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentGrandTotal.toFixed(2)}`; } 
+    else { if(splitContainer) { splitContainer.style.opacity = '1'; splitContainer.style.pointerEvents = 'auto'; } if(orbLabel) orbLabel.textContent = 'PER PERSON'; displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentPerPerson.toFixed(2)}`; }
     perPersonAmountDisplay.textContent = displayStr;
     const textLen = displayStr.length; if (textLen > 8) { perPersonAmountDisplay.style.fontSize = '2.8rem'; } else if (textLen > 6) { perPersonAmountDisplay.style.fontSize = '3.5rem'; } else { perPersonAmountDisplay.style.fontSize = '4.5rem'; }
     currentGrandTotal > 0 ? resultOrb.classList.remove('inactive') : resultOrb.classList.add('inactive');
@@ -276,7 +284,13 @@ document.getElementById('btn-crop-confirm').addEventListener('click', async () =
     cropper.getCroppedCanvas({ maxWidth: 1024, maxHeight: 1024 }).toBlob(async (blob) => {
         cropModal.classList.add('hidden'); cropper.destroy(); btnSnap.classList.add('scanning'); btnSnap.style.pointerEvents = 'none';
         try {
-            const result = await window.Tesseract.recognize(blob, 'eng'); let cleanText = result.data.text.replace(/(\d+)\s*[_\.,]\s*(\d+)/g, "$1.$2").replace(/\d+(?:\.\d+)?\s*%/g, ""); const allAmounts = [...cleanText.matchAll(/\b\d{1,4}(?:,\d{3})*\.\d{2}\b/g)].map(m => parseFloat(m[0].replace(',', ''))).sort((a, b) => b - a); let finalSub = 0, finalTax = 0, finalTotal = 0;
+            const result = await window.Tesseract.recognize(blob, 'eng'); 
+            let cleanText = result.data.text.replace(/(\d+)\s*[_\.,]\s*(\d+)/g, "$1.$2").replace(/\d+(?:\.\d+)?\s*%/g, ""); 
+            
+            // 🌟 V42.3 呼叫解析器，真·抽走所有食物資料！
+            globalParsedItems = parseReceiptItems(cleanText);
+
+            const allAmounts = [...cleanText.matchAll(/\b\d{1,4}(?:,\d{3})*\.\d{2}\b/g)].map(m => parseFloat(m[0].replace(',', ''))).sort((a, b) => b - a); let finalSub = 0, finalTax = 0, finalTotal = 0;
             const splitMatch = cleanText.match(/subtotal|taxable value|net|surtax|\btax\b|vat|total amount|\btotal\b/i);
             if (splitMatch && allAmounts.length > 0) { const itemAmounts = [...cleanText.substring(0, splitMatch.index).matchAll(/\b\d{1,4}(?:,\d{3})*\.\d{2}\b/g)].map(m => parseFloat(m[0].replace(',', ''))); const sumSubtotal = itemAmounts.reduce((a, b) => a + b, 0); const maxTotal = allAmounts[0]; const diffTax = maxTotal - sumSubtotal; if (sumSubtotal > 0 && diffTax >= 0 && diffTax < sumSubtotal * 0.3) { finalSub = sumSubtotal; finalTax = diffTax; finalTotal = maxTotal; } }
             if (finalSub === 0) { for (let i = 0; i < allAmounts.length; i++) { for (let j = i + 1; j < allAmounts.length; j++) { for (let k = j + 1; k < allAmounts.length; k++) { let c = allAmounts[i], a = allAmounts[j], b = allAmounts[k]; if (Math.abs((a + b) - c) < 0.05 && b < a * 0.3) { finalTotal = c; finalSub = a; finalTax = b; break; } } if (finalTotal) break; } if (finalTotal) break; } }
@@ -286,18 +300,12 @@ document.getElementById('btn-crop-confirm').addEventListener('click', async () =
     }, 'image/jpeg'); 
 });
 
-// 🌟 V42.1 改寫 Next Button 導向邏輯
 btnNext.addEventListener('click', async () => {
     if (currentGrandTotal === 0) { showNoticeModal('Empty Bill', '大佬，未入銀碼喎！'); return; }
-    
-    if (isItemizedMode) {
-        // 如果用家喺 Itemized 模式唔小心閂咗 Modal，撳 Next 可以重新打開
-        document.getElementById('itemized-modal').classList.remove('hidden');
-    } else {
-        if (currentTripMode) { 
-            expenseTitleInput.value = ''; 
-            assignmentModal.classList.remove('hidden'); 
-        } else {
+    if (isItemizedMode) { document.getElementById('itemized-modal').classList.remove('hidden'); } 
+    else {
+        if (currentTripMode) { expenseTitleInput.value = ''; assignmentModal.classList.remove('hidden'); } 
+        else {
             const userName = localStorage.getItem('billapp_user_name') || 'Me'; 
             const shareText = `🍽️ ${userName} shared a bill\n\n🔹 Subtotal: $${scannedSubtotal.toFixed(2)}\n🔹 Tax: $${scannedTax.toFixed(2)}\n🔹 Tip (${globalTipValue}%): $${(scannedSubtotal * (globalTipValue / 100)).toFixed(2)}\n💰 Total: $${currentGrandTotal.toFixed(2)}\n\n👥 Split: ${globalSplitValue} ppl\n👉 Per Person: $${currentPerPerson.toFixed(2)}`;
             if (navigator.share) { try { await navigator.share({ title: `${userName}'s Bill`, text: shareText }); } catch (e) {} } else { navigator.clipboard.writeText(shareText).then(() => { showNoticeModal('Copied', 'Details copied to clipboard.'); }); }
@@ -316,7 +324,7 @@ document.getElementById('btn-done').addEventListener('click', () => { manualSubt
 autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender();
 
 // ==========================================
-// 🌟 V42.1: PAINTBRUSH MODE LOGIC 
+// 🌟 V42.3: PAINTBRUSH MODE LOGIC (真 Data)
 // ==========================================
 let parsedItemsData = [];
 let currentBrushUser = null; 
@@ -327,12 +335,14 @@ function initPaintbrushMode() {
     if (!tripMembersForSplit.includes(getCurrentUser())) tripMembersForSplit.unshift(getCurrentUser());
     currentBrushUser = getCurrentUser();
 
-    parsedItemsData = [
-        { id: 'item_1', name: "HK Style Pan Fried Pork", price: 18.75, assignedTo: [] },
-        { id: 'item_2', name: "Satay Chicken Chow Fun", price: 18.75, assignedTo: [] },
-        { id: 'item_3', name: "Drink (Ice Lemon Water)", price: 0.99, assignedTo: [] },
-        { id: 'item_4', name: "Free Drink", price: 0.00, assignedTo: [] }
-    ];
+    // 徹底棄用 Hardcode，只有 OCR 數據或 Fallback
+    if (globalParsedItems && globalParsedItems.length > 0) {
+        parsedItemsData = JSON.parse(JSON.stringify(globalParsedItems));
+    } else {
+        parsedItemsData = [
+            { id: 'item_manual', name: "Manual Item (OCR Failed)", price: scannedSubtotal, assignedTo: [] }
+        ];
+    }
 
     renderAvatarDock();
     renderScannedItems();
@@ -340,14 +350,10 @@ function initPaintbrushMode() {
 }
 
 function renderAvatarDock() {
-    const dockContainer = document.getElementById('avatar-dock-container');
-    dockContainer.innerHTML = '';
+    const dockContainer = document.getElementById('avatar-dock-container'); dockContainer.innerHTML = '';
     tripMembersForSplit.forEach(member => {
-        const initial = member.charAt(0).toUpperCase();
-        const isMe = member === getCurrentUser();
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = `dock-avatar ${member === currentBrushUser ? 'active-brush' : ''}`;
-        avatarDiv.innerHTML = initial;
+        const initial = member.charAt(0).toUpperCase(); const isMe = member === getCurrentUser();
+        const avatarDiv = document.createElement('div'); avatarDiv.className = `dock-avatar ${member === currentBrushUser ? 'active-brush' : ''}`; avatarDiv.innerHTML = initial;
         if (member === currentBrushUser) { avatarDiv.style.background = isMe ? 'var(--accent-blue)' : '#E5E7EB'; avatarDiv.style.color = '#000'; }
         avatarDiv.addEventListener('click', () => { currentBrushUser = member; renderAvatarDock(); });
         dockContainer.appendChild(avatarDiv);
@@ -355,25 +361,17 @@ function renderAvatarDock() {
 }
 
 function renderScannedItems() {
-    const listContainer = document.getElementById('scanned-items-list');
-    listContainer.innerHTML = '';
-    parsedItemsData.forEach((item, index) => {
+    const listContainer = document.getElementById('scanned-items-list'); listContainer.innerHTML = '';
+    parsedItemsData.forEach((item) => {
         const itemRow = document.createElement('div'); itemRow.className = 'item-row';
         let avatarsHTML = '';
-        item.assignedTo.forEach(assignee => {
-            const isMe = assignee === getCurrentUser(); const bgCol = isMe ? 'var(--accent-blue)' : '#E5E7EB';
-            avatarsHTML += `<div class="mini-avatar" style="background: ${bgCol};">${assignee.charAt(0).toUpperCase()}</div>`;
-        });
-        
-        // 🌟 強制加上 Flex Layout 確保文字同頭像左右對齊，唔會變形
+        item.assignedTo.forEach(assignee => { const isMe = assignee === getCurrentUser(); const bgCol = isMe ? 'var(--accent-blue)' : '#E5E7EB'; avatarsHTML += `<div class="mini-avatar" style="background: ${bgCol};">${assignee.charAt(0).toUpperCase()}</div>`; });
         itemRow.innerHTML = `
             <div style="flex: 1; pointer-events: none; text-align: left; display: flex; flex-direction: column; align-items: flex-start;">
                 <div style="color: white; font-size: 1.05rem; font-weight: 500; margin-bottom: 4px;">${item.name}</div>
                 <div style="color: var(--text-dim); font-size: 0.95rem;">$${item.price.toFixed(2)}</div>
             </div>
-            <div class="assigned-avatars-container" style="pointer-events: none; min-width: 40px; display: flex; justify-content: flex-end;">
-                ${avatarsHTML}
-            </div>
+            <div class="assigned-avatars-container" style="pointer-events: none; min-width: 40px; display: flex; justify-content: flex-end;">${avatarsHTML}</div>
         `;
         itemRow.addEventListener('click', () => {
             if (!currentBrushUser) return;
@@ -388,10 +386,7 @@ function renderScannedItems() {
 function updateItemizedMath() {
     let myShareSubtotal = 0; let totalAssignedSubtotal = 0; 
     parsedItemsData.forEach(item => {
-        if (item.assignedTo.length > 0) {
-            totalAssignedSubtotal += item.price;
-            if (item.assignedTo.includes(getCurrentUser())) { myShareSubtotal += (item.price / item.assignedTo.length); }
-        }
+        if (item.assignedTo.length > 0) { totalAssignedSubtotal += item.price; if (item.assignedTo.includes(getCurrentUser())) { myShareSubtotal += (item.price / item.assignedTo.length); } }
     });
     document.getElementById('assigned-subtotal-val').textContent = `$${myShareSubtotal.toFixed(2)}`;
     const receiptTotalNode = document.getElementById('receipt-subtotal-modal-val');
@@ -399,6 +394,5 @@ function updateItemizedMath() {
     if (Math.abs(totalAssignedSubtotal - scannedSubtotal) < 0.1) { receiptTotalNode.style.color = '#34D399'; } else { receiptTotalNode.style.color = '#FF3B30'; }
 }
 
-// 點擊關閉按鈕或者背景隱藏 Itemized Modal
 document.getElementById('btn-itemized-cancel').addEventListener('click', () => { document.getElementById('itemized-modal').classList.add('hidden'); });
 document.getElementById('itemized-bg-overlay').addEventListener('click', () => { document.getElementById('itemized-modal').classList.add('hidden'); });
