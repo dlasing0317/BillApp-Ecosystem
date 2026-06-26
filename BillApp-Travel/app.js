@@ -1,5 +1,5 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V42.3 - Clean Slate)
+// 🌟 FIREBASE SETUP & IMPORT (V42.4)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -182,45 +182,26 @@ document.getElementById('btn-basic-save').addEventListener('click', async () => 
 });
 
 // ==========================================
-// 🌟 SCANNER / ORB LOGIC (V42.3)
+// 🌟 SCANNER / ORB LOGIC (V42.4)
 // ==========================================
 const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-next'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const assignmentModal = document.getElementById('assignment-modal'); const expenseTitleInput = document.getElementById('expense-title'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image');
 let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 5; let globalSplitValue = 1;
 
-// 🌟 V42.3 真・OCR 儲存庫
 let globalParsedItems = []; 
-
-// 🌟 V42.3 強化版智能收據解析器
 function parseReceiptItems(text) {
-    const lines = text.split('\n');
-    const items = [];
-    let idCounter = 1;
-    // 過濾無關字眼，加入 'description', 'price', 'dine-in', 'yumee' 防古惑
+    const lines = text.split('\n'); const items = []; let idCounter = 1;
     const ignoreWords = ['subtotal', 'tax', 'total', 'tip', 'change', 'cash', 'visa', 'mastercard', 'amex', 'due', 'balance', 'guest', 'table', 'terminal', 'inv#', 'description', 'price', 'dine-in', 'yumee'];
-
     lines.forEach(line => {
-        const cleanLine = line.trim();
-        if (!cleanLine) return;
-        const lowerLine = cleanLine.toLowerCase();
-        if (ignoreWords.some(word => lowerLine.includes(word))) return;
-
-        const priceRegex = /(?:\$?\s*)(\d{1,4}(?:,\d{3})*\.\d{2})(?!\d)/;
-        const match = cleanLine.match(priceRegex);
-
+        const cleanLine = line.trim(); if (!cleanLine) return; const lowerLine = cleanLine.toLowerCase(); if (ignoreWords.some(word => lowerLine.includes(word))) return;
+        const priceRegex = /(?:\$?\s*)(\d{1,4}(?:,\d{3})*\.\d{2})(?!\d)/; const match = cleanLine.match(priceRegex);
         if (match) {
             const priceVal = parseFloat(match[1].replace(',', ''));
-            // 防 OCR 亂入天文數字，只入 $500 樓下嘅嘢食
             if (priceVal > 0 && priceVal < 500) {
-                let name = cleanLine.replace(match[0], '').trim();
-                name = name.replace(/^(\d+\s*x?\s*)/i, '').trim(); // 移走 '1 ' 或者 '1x '
-                name = name.replace(/^[^\w\s]+/g, '').trim(); 
-                if (name.length > 2) {
-                    items.push({ id: 'item_' + idCounter++, name: name, price: priceVal, assignedTo: [] });
-                }
+                let name = cleanLine.replace(match[0], '').trim(); name = name.replace(/^(\d+\s*x?\s*)/i, '').trim(); name = name.replace(/^[^\w\s]+/g, '').trim(); 
+                if (name.length > 2) { items.push({ id: 'item_' + idCounter++, name: name, price: priceVal, assignedTo: [] }); }
             }
         }
-    });
-    return items;
+    }); return items;
 }
 
 let isItemizedMode = false;
@@ -237,7 +218,6 @@ if(btnModeSimple && btnModeItemized) {
     btnModeItemized.addEventListener('click', () => { 
         if (currentGrandTotal === 0 || isNaN(currentGrandTotal)) { showNoticeModal('Oops!', '請先掃描單據或手動輸入 Subtotal 啦！'); isItemizedMode = false; updateScannerModeUI(); return; }
         isItemizedMode = true; updateScannerModeUI();
-        document.getElementById('receipt-subtotal-modal-val').textContent = `$0.00 / $${scannedSubtotal.toFixed(2)}`;
         document.getElementById('itemized-modal').classList.remove('hidden');
         initPaintbrushMode();
     });
@@ -286,10 +266,7 @@ document.getElementById('btn-crop-confirm').addEventListener('click', async () =
         try {
             const result = await window.Tesseract.recognize(blob, 'eng'); 
             let cleanText = result.data.text.replace(/(\d+)\s*[_\.,]\s*(\d+)/g, "$1.$2").replace(/\d+(?:\.\d+)?\s*%/g, ""); 
-            
-            // 🌟 V42.3 呼叫解析器，真·抽走所有食物資料！
             globalParsedItems = parseReceiptItems(cleanText);
-
             const allAmounts = [...cleanText.matchAll(/\b\d{1,4}(?:,\d{3})*\.\d{2}\b/g)].map(m => parseFloat(m[0].replace(',', ''))).sort((a, b) => b - a); let finalSub = 0, finalTax = 0, finalTotal = 0;
             const splitMatch = cleanText.match(/subtotal|taxable value|net|surtax|\btax\b|vat|total amount|\btotal\b/i);
             if (splitMatch && allAmounts.length > 0) { const itemAmounts = [...cleanText.substring(0, splitMatch.index).matchAll(/\b\d{1,4}(?:,\d{3})*\.\d{2}\b/g)].map(m => parseFloat(m[0].replace(',', ''))); const sumSubtotal = itemAmounts.reduce((a, b) => a + b, 0); const maxTotal = allAmounts[0]; const diffTax = maxTotal - sumSubtotal; if (sumSubtotal > 0 && diffTax >= 0 && diffTax < sumSubtotal * 0.3) { finalSub = sumSubtotal; finalTax = diffTax; finalTotal = maxTotal; } }
@@ -324,7 +301,7 @@ document.getElementById('btn-done').addEventListener('click', () => { manualSubt
 autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender();
 
 // ==========================================
-// 🌟 V42.3: PAINTBRUSH MODE LOGIC (真 Data)
+// 🌟 V42.4: PAINTBRUSH MODE LOGIC (獨立總數版)
 // ==========================================
 let parsedItemsData = [];
 let currentBrushUser = null; 
@@ -335,13 +312,10 @@ function initPaintbrushMode() {
     if (!tripMembersForSplit.includes(getCurrentUser())) tripMembersForSplit.unshift(getCurrentUser());
     currentBrushUser = getCurrentUser();
 
-    // 徹底棄用 Hardcode，只有 OCR 數據或 Fallback
     if (globalParsedItems && globalParsedItems.length > 0) {
         parsedItemsData = JSON.parse(JSON.stringify(globalParsedItems));
     } else {
-        parsedItemsData = [
-            { id: 'item_manual', name: "Manual Item (OCR Failed)", price: scannedSubtotal, assignedTo: [] }
-        ];
+        parsedItemsData = [{ id: 'item_manual', name: "Manual Item (OCR Failed)", price: scannedSubtotal, assignedTo: [] }];
     }
 
     renderAvatarDock();
@@ -353,10 +327,33 @@ function renderAvatarDock() {
     const dockContainer = document.getElementById('avatar-dock-container'); dockContainer.innerHTML = '';
     tripMembersForSplit.forEach(member => {
         const initial = member.charAt(0).toUpperCase(); const isMe = member === getCurrentUser();
-        const avatarDiv = document.createElement('div'); avatarDiv.className = `dock-avatar ${member === currentBrushUser ? 'active-brush' : ''}`; avatarDiv.innerHTML = initial;
+        
+        // Wrapper 包住頭像同銀碼
+        const wrapper = document.createElement('div');
+        wrapper.className = 'dock-avatar-wrapper';
+        
+        // 頭像
+        const avatarDiv = document.createElement('div'); 
+        avatarDiv.className = `dock-avatar ${member === currentBrushUser ? 'active-brush' : ''}`; 
+        avatarDiv.innerHTML = initial;
         if (member === currentBrushUser) { avatarDiv.style.background = isMe ? 'var(--accent-blue)' : '#E5E7EB'; avatarDiv.style.color = '#000'; }
-        avatarDiv.addEventListener('click', () => { currentBrushUser = member; renderAvatarDock(); });
-        dockContainer.appendChild(avatarDiv);
+        
+        // 獨立銀碼
+        const amountDiv = document.createElement('div');
+        amountDiv.className = 'avatar-amount';
+        amountDiv.id = `amount-${member.replace(/\s+/g, '-')}`; // 安全 ID
+        amountDiv.textContent = '$0.00';
+        if (member === currentBrushUser) { amountDiv.style.color = isMe ? 'var(--accent-blue)' : '#E5E7EB'; }
+
+        avatarDiv.addEventListener('click', () => { 
+            currentBrushUser = member; 
+            renderAvatarDock(); 
+            updateItemizedMath(); // 確保轉人嗰陣銀碼唔會消失
+        });
+        
+        wrapper.appendChild(avatarDiv);
+        wrapper.appendChild(amountDiv);
+        dockContainer.appendChild(wrapper);
     });
 }
 
@@ -365,13 +362,25 @@ function renderScannedItems() {
     parsedItemsData.forEach((item) => {
         const itemRow = document.createElement('div'); itemRow.className = 'item-row';
         let avatarsHTML = '';
-        item.assignedTo.forEach(assignee => { const isMe = assignee === getCurrentUser(); const bgCol = isMe ? 'var(--accent-blue)' : '#E5E7EB'; avatarsHTML += `<div class="mini-avatar" style="background: ${bgCol};">${assignee.charAt(0).toUpperCase()}</div>`; });
+        
+        if (item.assignedTo.length === 0) {
+            avatarsHTML = `<div style="width: 28px; height: 28px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.2);"></div>`;
+        } else {
+            item.assignedTo.forEach((assignee, i) => { 
+                const isMe = assignee === getCurrentUser(); const bgCol = isMe ? 'var(--accent-blue)' : '#E5E7EB'; 
+                const marginLeft = i === 0 ? '0' : '-10px';
+                avatarsHTML += `<div class="mini-avatar" style="background: ${bgCol}; margin-left: ${marginLeft}; z-index: ${i};">${assignee.charAt(0).toUpperCase()}</div>`; 
+            });
+        }
+
         itemRow.innerHTML = `
-            <div style="flex: 1; pointer-events: none; text-align: left; display: flex; flex-direction: column; align-items: flex-start;">
-                <div style="color: white; font-size: 1.05rem; font-weight: 500; margin-bottom: 4px;">${item.name}</div>
-                <div style="color: var(--text-dim); font-size: 0.95rem;">$${item.price.toFixed(2)}</div>
+            <div style="pointer-events: none; display: flex; flex-direction: row; align-items: center; width: 45px; justify-content: flex-start;">
+                ${avatarsHTML}
             </div>
-            <div class="assigned-avatars-container" style="pointer-events: none; min-width: 40px; display: flex; justify-content: flex-end;">${avatarsHTML}</div>
+            <div style="flex: 1; pointer-events: none; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
+                <div style="color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">${item.name}</div>
+                <div style="color: var(--text-dim); font-size: 1rem; font-weight: 500;">$${item.price.toFixed(2)}</div>
+            </div>
         `;
         itemRow.addEventListener('click', () => {
             if (!currentBrushUser) return;
@@ -384,14 +393,22 @@ function renderScannedItems() {
 }
 
 function updateItemizedMath() {
-    let myShareSubtotal = 0; let totalAssignedSubtotal = 0; 
+    let userTotals = {};
+    tripMembersForSplit.forEach(m => userTotals[m] = 0);
+    
     parsedItemsData.forEach(item => {
-        if (item.assignedTo.length > 0) { totalAssignedSubtotal += item.price; if (item.assignedTo.includes(getCurrentUser())) { myShareSubtotal += (item.price / item.assignedTo.length); } }
+        if (item.assignedTo.length > 0) { 
+            const splitPrice = item.price / item.assignedTo.length;
+            item.assignedTo.forEach(assignee => {
+                if (userTotals[assignee] !== undefined) { userTotals[assignee] += splitPrice; }
+            });
+        }
     });
-    document.getElementById('assigned-subtotal-val').textContent = `$${myShareSubtotal.toFixed(2)}`;
-    const receiptTotalNode = document.getElementById('receipt-subtotal-modal-val');
-    receiptTotalNode.textContent = `$${totalAssignedSubtotal.toFixed(2)} / $${scannedSubtotal.toFixed(2)}`;
-    if (Math.abs(totalAssignedSubtotal - scannedSubtotal) < 0.1) { receiptTotalNode.style.color = '#34D399'; } else { receiptTotalNode.style.color = '#FF3B30'; }
+
+    tripMembersForSplit.forEach(member => {
+        const amountNode = document.getElementById(`amount-${member.replace(/\s+/g, '-')}`);
+        if (amountNode) { amountNode.textContent = `$${userTotals[member].toFixed(2)}`; }
+    });
 }
 
 document.getElementById('btn-itemized-cancel').addEventListener('click', () => { document.getElementById('itemized-modal').classList.add('hidden'); });

@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <link rel="stylesheet" href="../shared/core-ui.css">
     <link rel="stylesheet" href="../shared/scanner-ui.css">
-    <link rel="stylesheet" href="style.css?v=42.2">
+    <link rel="stylesheet" href="style.css?v=42.4">
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
@@ -23,14 +23,16 @@
         .toast-hidden { opacity: 0; pointer-events: none; transform: translate(-50%, -20px) !important; }
         .toast-visible { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) !important; }
         
-        /* 🌟 V42.2 強制生效版 Paintbrush UI (Bypass Cache) */
-        .avatar-dock { display: flex; flex-direction: row; justify-content: center; gap: 15px; padding: 10px 5px 15px 5px; overflow-x: auto; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .dock-avatar { flex: 0 0 50px; height: 50px; border-radius: 50%; background: #2A2E38; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; opacity: 0.4; transition: all 0.2s; border: 2px solid transparent; cursor: pointer; }
-        .dock-avatar.active-brush { opacity: 1; border: 2px solid white; transform: scale(1.15) translateY(-2px); box-shadow: 0 5px 15px rgba(125, 211, 252, 0.4); z-index: 2; background: var(--accent-blue); color: #000; }
-        .item-row { display: flex; flex-direction: row; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px; cursor: pointer; transition: background 0.2s; }
+        /* 🌟 V42.4 乾淨版 Paintbrush UI (個人總數喺頭像下面) */
+        .avatar-dock { display: flex; flex-direction: row; justify-content: center; gap: 20px; padding: 10px 5px 15px 5px; overflow-x: auto; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; scrollbar-width: none; }
+        .avatar-dock::-webkit-scrollbar { display: none; }
+        .dock-avatar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .dock-avatar { flex: 0 0 50px; width: 50px; height: 50px; border-radius: 50%; background: #2A2E38; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; opacity: 0.4; transition: all 0.2s; border: 2px solid transparent; cursor: pointer; }
+        .dock-avatar.active-brush { opacity: 1; border: 2px solid white; transform: scale(1.1) translateY(-2px); box-shadow: 0 5px 15px rgba(125, 211, 252, 0.4); z-index: 2; background: var(--accent-blue); color: #000; }
+        .avatar-amount { font-size: 0.85rem; color: var(--text-dim); font-weight: 600; transition: color 0.2s; letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
+        .item-row { display: flex; flex-direction: row; justify-content: flex-start; align-items: center; background: rgba(0,0,0,0.25); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px; cursor: pointer; transition: background 0.2s; }
         .item-row:active { background: rgba(125, 211, 252, 0.1); }
-        .assigned-avatars-container { display: flex; flex-direction: row-reverse; align-items: center; }
-        .mini-avatar { width: 32px; height: 32px; border-radius: 50%; color: #000; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; border: 2px solid #111520; margin-left: -10px; box-shadow: -2px 0 5px rgba(0,0,0,0.5); animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .mini-avatar { width: 30px; height: 30px; border-radius: 50%; color: #000; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; border: 2px solid #111520; box-shadow: -2px 0 5px rgba(0,0,0,0.5); animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
     </style>
 </head>
@@ -101,13 +103,15 @@
         </div>
     </div>
 
+    <!-- 📦 MODALS -->
     <div id="notifications-modal" class="modal-overlay hidden" style="z-index: 9999;"><div class="glass-modal-card" style="max-width: 360px; width: 90%; padding: 25px 20px; max-height: 80vh;"><h3 class="modal-title" style="margin-bottom: 15px; color: var(--text-main);">Notifications 🔔</h3><div class="content-scroll" id="notification-list" style="width: 100%; max-height: 50vh; overflow-y: auto; padding: 0; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;"></div><div style="width: 100%;"><button class="modal-close-btn" id="btn-notifications-close" style="width: 100%; background: #21242D; color: #fff;">Close</button></div></div></div>
     <div id="join-trip-modal" class="modal-overlay hidden" style="z-index: 9998;"><div class="glass-modal-card" style="max-width: 340px; padding: 25px 20px;"><h3 class="modal-title" style="margin-bottom: 15px; color: var(--text-main);">Join Trip 🤝</h3><div class="modal-content" style="margin-bottom: 25px; text-align: center; width: 100%;"><p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 15px;">Enter the 6-digit Trip Code.</p><div class="modal-input-glass" style="justify-content: center; padding: 15px;"><input type="text" inputmode="numeric" pattern="[0-9]*" id="join-code-input" placeholder="123456" style="width: 100%; text-align: center; font-size: 1.8rem; letter-spacing: 10px; font-weight: bold; color: var(--accent-blue);"></div></div><div style="display: flex; gap: 10px; width: 100%;"><button class="modal-close-btn" id="btn-join-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-join-submit" style="background: var(--accent-blue); color: #000;">Join</button></div></div></div>
     <div id="invite-modal" class="modal-overlay hidden" style="z-index: 9998;"><div class="glass-modal-card" style="max-width: 320px; padding: 25px 20px;"><h3 class="modal-title" style="margin-bottom: 15px; color: var(--accent-blue);">Trip Invite ✈️</h3><div class="modal-content" id="invite-message" style="margin-bottom: 25px; text-align: center; color: var(--text-main); font-size: 1.1rem; line-height: 1.5;">Loading invitation...</div><div style="display: flex; gap: 10px; width: 100%;"><button class="modal-close-btn" id="btn-invite-cancel" style="background: #21242D; color: #fff;">Decline</button><button class="modal-close-btn" id="btn-invite-accept" style="background: var(--accent-blue); color: #000;">Join</button></div></div></div>
-    <div id="info-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3><div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;"><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V42.2 (Auto Parser)</span></div><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span></div></div><div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div></div></div>
+    <div id="info-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3><div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;"><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">BillApp Travel V42.4 (Clean UI)</span></div><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span></div></div><div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div></div></div>
     
     <div id="settings-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" style="margin-bottom: 25px;">Setup Profile</h3><div class="modal-content" style="gap: 15px; display: flex; flex-direction: column; width: 100%;"><div class="modal-input-glass"><label>Name</label><input type="text" id="settings-name-input" placeholder="Name"></div><div class="modal-input-glass"><label>Venmo ID</label><input type="text" id="settings-venmo-input" placeholder="Without @"></div><div class="modal-input-glass"><label>Zelle</label><input type="text" id="settings-zelle-input" placeholder="Phone or Email"></div></div><div style="display: flex; gap: 10px; width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-settings-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-settings-save">Save Profile</button></div></div></div>
 
+    <!-- 🌟 V42.4: 乾淨版 Itemized Split Modal (無 Summary Box) -->
     <div id="itemized-modal" class="modal-overlay hidden" style="z-index: 9999;">
         <div style="position: absolute; top:0; left:0; width:100%; height:100%;" id="itemized-bg-overlay"></div>
         <div class="glass-modal-card" style="width: 95%; max-width: 450px; height: 85vh; padding: 20px; display: flex; flex-direction: column; z-index: 10;">
@@ -116,20 +120,10 @@
                 <button id="btn-add-manual-item" style="background: rgba(125, 211, 252, 0.15); border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 5px 12px; border-radius: 12px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">+ Add Item</button>
             </div>
             
+            <!-- 頭像與獨立總數區 -->
             <div id="avatar-dock-container" class="avatar-dock"></div>
             
-            <div class="content-scroll" id="scanned-items-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; padding-right: 5px;"></div>
-            
-            <div class="glass-box" style="padding: 15px; margin-bottom: 15px; border-color: rgba(125, 211, 252, 0.3);">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                    <span style="color: var(--text-dim);">Your Share (Subtotal):</span>
-                    <span id="assigned-subtotal-val" style="color: var(--accent-blue); font-size: 1.2rem; font-weight: bold;">$0.00</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-dim); font-size: 0.85rem;">Total Receipt Subtotal:</span>
-                    <span id="receipt-subtotal-modal-val" style="color: white; font-weight: bold; font-size: 0.9rem;">$0.00</span>
-                </div>
-            </div>
+            <div class="content-scroll" id="scanned-items-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 25px; padding-right: 5px;"></div>
             
             <div style="display: flex; gap: 10px; width: 100%;">
                 <button class="modal-close-btn" id="btn-itemized-cancel" style="background: #21242D; color: #fff;">Close</button>
@@ -146,6 +140,6 @@
     <div id="confirm-modal" class="modal-overlay hidden" style="z-index: 999;"><div class="glass-modal-card" style="max-width: 320px; padding: 25px 20px;"><h3 class="modal-title" style="margin-bottom: 15px; color: #FF3B30;">Warning</h3><div class="modal-content" id="confirm-message" style="margin-bottom: 25px; text-align: center; color: var(--text-main); font-size: 1.1rem;">Are you sure?</div><div style="display: flex; gap: 10px; width: 100%;"><button class="modal-close-btn" id="btn-confirm-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-confirm-delete" style="background: rgba(255, 59, 48, 0.2); color: #FF3B30;">Delete</button></div></div></div>
     <div id="toast-notification" class="toast-hidden" style="position: fixed; top: calc(env(safe-area-inset-top) + 10px); left: 50%; transform: translateX(-50%); background: var(--accent-blue); color: #000; padding: 12px 24px; border-radius: 30px; font-weight: bold; z-index: 10000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; gap: 8px;"><span>🎉</span> <span id="toast-message">Notification</span></div>
 
-    <script type="module" src="app.js?v=42.2"></script>
+    <script type="module" src="app.js?v=42.4"></script>
 </body>
 </html>

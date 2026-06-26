@@ -1,11 +1,5 @@
-/* 🌟 終極防重疊 (強制隱藏非活動頁面) */
-.app-page:not(.active) {
-    display: none !important;
-}
-
 /* ==========================================
    📸 BillApp-Scanner 專屬樣式 (style.css)
-   (已移除全域及 Modal 樣式，統一由 shared/core-ui.css 管理)
    ========================================== */
 
 button, input, .dial-svg-wrapper, .action-circle-btn, svg {
@@ -39,11 +33,7 @@ button, input, .dial-svg-wrapper, .action-circle-btn, svg {
 .top-corner-btn svg { width: 24px; height: 24px; pointer-events: none; }
 .top-corner-btn:active { transform: scale(0.9); color: var(--accent-blue); filter: drop-shadow(0 0 8px var(--accent-glow)); }
 
-.top-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+.top-section { display: flex; justify-content: center; align-items: center; }
 
 .aperture-btn {
     width: clamp(90px, 12vh, 120px);
@@ -64,32 +54,10 @@ button, input, .dial-svg-wrapper, .action-circle-btn, svg {
 .aperture-btn.scanning { color: var(--accent-blue); border-color: var(--accent-blue); animation: pulseScan 1.5s infinite; }
 @keyframes pulseScan { 0% { box-shadow: 0 0 0 0 var(--accent-glow), inset 0 4px 10px rgba(255,255,255,0.2); } 70% { box-shadow: 0 0 0 20px rgba(125, 211, 252, 0), inset 0 4px 10px rgba(255,255,255,0.2); } 100% { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0), inset 0 4px 10px rgba(255,255,255,0.2); } }
 
-.dials-row {
-    width: 100%;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-}
-
-.dial-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 130px;
-}
-
-.dial-svg-wrapper {
-    position: relative;
-    width: clamp(100px, 14vh, 130px);
-    height: clamp(100px, 14vh, 130px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    touch-action: none;
-    cursor: grab;
-}
+.dials-row { width: 100%; display: flex; justify-content: space-around; align-items: center; }
+.dial-container { display: flex; flex-direction: column; align-items: center; width: 130px; }
+.dial-svg-wrapper { position: relative; width: clamp(100px, 14vh, 130px); height: clamp(100px, 14vh, 130px); display: flex; justify-content: center; align-items: center; touch-action: none; cursor: grab; }
 .dial-svg-wrapper:active { cursor: grabbing; }
-
 .dial-svg-wrapper svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(135deg); overflow: visible; pointer-events: none; }
 .dial-bg { fill: none; stroke: var(--track-color); stroke-width: 10; }
 .dial-progress { fill: none; stroke: var(--accent-blue); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.05s linear; filter: drop-shadow(0 0 10px var(--accent-glow)); }
@@ -99,28 +67,8 @@ button, input, .dial-svg-wrapper, .action-circle-btn, svg {
 .dial-inner-label { font-size: 0.75rem; color: var(--text-dim); letter-spacing: 1px; margin-bottom: -2px; text-transform: uppercase; }
 .dial-center-text { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
 
-.center-result-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-}
-
-.result-orb {
-    width: clamp(180px, 24vh, 230px);
-    height: clamp(180px, 24vh, 230px);
-    border-radius: 50%;
-    background: radial-gradient(circle at 50% 100%, #151A24 0%, #080A0F 100%);
-    border: 1px solid rgba(125, 211, 252, 0.2);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 0 40px rgba(125, 211, 252, 0.15), inset 0 2px 5px rgba(255, 255, 255, 0.2), inset 0 -20px 40px rgba(0, 0, 0, 0.9);
-    transition: all 0.3s;
-}
-
+.center-result-section { display: flex; justify-content: center; align-items: center; width: 100%; }
+.result-orb { width: clamp(180px, 24vh, 230px); height: clamp(180px, 24vh, 230px); border-radius: 50%; background: radial-gradient(circle at 50% 100%, #151A24 0%, #080A0F 100%); border: 1px solid rgba(125, 211, 252, 0.2); display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; box-shadow: 0 0 40px rgba(125, 211, 252, 0.15), inset 0 2px 5px rgba(255, 255, 255, 0.2), inset 0 -20px 40px rgba(0, 0, 0, 0.9); transition: all 0.3s; }
 .orb-glare { position: absolute; top: 1%; left: 15%; width: 70%; height: 40%; border-radius: 50%; background: radial-gradient(ellipse at 50% 10%, rgba(255,255,255,0.3) 0%, transparent 70%); pointer-events: none; }
 .result-orb.inactive { border: 1px solid var(--track-color); background: var(--bg-main); box-shadow: inset 0 2px 5px rgba(255,255,255,0.05), inset 0 -20px 40px rgba(0,0,0,0.8); }
 .result-orb.inactive .orb-glare { opacity: 0.1; }
@@ -130,21 +78,12 @@ button, input, .dial-svg-wrapper, .action-circle-btn, svg {
 .orb-label { font-size: 0.8rem; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 .orb-amount { font-size: clamp(3rem, 5vh, 4rem); font-weight: 700; color: var(--text-main); letter-spacing: -1px; text-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: font-size 0.2s ease-out; }
 
-.bottom-controls-row {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    gap: 15px; 
-}
-
+.bottom-controls-row { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 15px; }
 .manual-panel { width: 100%; display: flex; flex-direction: column; }
-
 .input-line { display: flex; justify-content: space-between; align-items: center; }
 .input-line label { color: var(--text-dim); font-size: 0.95rem; transition: color 0.3s; }
 .input-with-symbol { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
 .input-with-symbol span { color: var(--text-dim); font-size: 1.1rem; font-weight: 600; }
-
 #manual-title { width: 100%; background: transparent; border: none; color: var(--text-main); font-size: 1rem; font-weight: 500; text-align: left; outline: none; padding: 2px 0; }
 #manual-title::placeholder { color: var(--text-dim); font-weight: 400; opacity: 0.7; }
 .input-with-symbol input { background: transparent; border: none; color: var(--text-dim); font-size: 1.1rem; font-weight: 600; text-align: left; outline: none; font-variant-numeric: tabular-nums; width: 45px; transition: width 0.1s ease-out; }
@@ -154,7 +93,6 @@ button, input, .dial-svg-wrapper, .action-circle-btn, svg {
 
 .actions-panel { display: flex; flex-direction: row; justify-content: space-around; width: 100%; padding: 0 10px; }
 .action-wrapper { width: 190px; display: flex; justify-content: center; align-items: center; }
-
 .action-circle-btn { width: 60px; height: 60px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: var(--text-dim); transition: all 0.2s; background: radial-gradient(circle at 50% 0%, #1A283B 0%, #0F172A 100%); border: 2px solid var(--track-color); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 .action-circle-btn:active { transform: scale(0.9); border-color: var(--accent-blue); box-shadow: 0 0 20px var(--accent-glow), inset 0 2px 5px rgba(255,255,255,0.2); color: var(--accent-blue); }
 
@@ -168,14 +106,5 @@ button, input, .dial-svg-wrapper, .action-circle-btn, svg {
 .crop-btn.confirm { background: #E5E7EB; color: #000; }
 .crop-hint { position: absolute; top: calc(env(safe-area-inset-top) + 20px); left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 20px; color: #FFFFFF; font-size: 1rem; font-weight: 600; z-index: 10; pointer-events: none; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5); letter-spacing: 0.5px; }
 
-/* ==========================================
-   🌟 V42.2: Paintbrush Mode (Itemized Split) UI
-   ========================================== */
-.avatar-dock { display: flex; gap: 15px; padding: 10px 5px 15px 5px; overflow-x: auto; border-bottom: 1px solid rgba(255,255,255,0.1); scrollbar-width: none; }
-.avatar-dock::-webkit-scrollbar { display: none; }
-.dock-avatar { min-width: 50px; height: 50px; border-radius: 50%; background: #2A2E38; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; opacity: 0.5; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border: 2px solid transparent; }
-.dock-avatar.active-brush { background: var(--accent-blue); color: #000; opacity: 1; border: 2px solid white; transform: scale(1.15) translateY(-5px); box-shadow: 0 10px 20px rgba(125, 211, 252, 0.4); }
-.item-row { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; cursor: pointer; margin-bottom: 8px; }
-.item-row:active { background: rgba(125, 211, 252, 0.1); }
-.assigned-avatars-container { display: flex; flex-direction: row-reverse; gap: -10px; min-width: 40px; justify-content: flex-end; }
-.mini-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-blue); color: #000; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; border: 2px solid #111520; margin-left: -12px; box-shadow: -2px 0 5px rgba(0,0,0,0.5); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+/* 🌟 終極防重疊 (強制隱藏非活動頁面) */
+.app-page:not(.active) { display: none !important; }
