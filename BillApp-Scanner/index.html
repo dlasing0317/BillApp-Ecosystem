@@ -12,12 +12,9 @@
     <title>BillAPP - Global Pay Ready</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
-    
     <link rel="stylesheet" href="../shared/core-ui.css">
-    
     <link rel="stylesheet" href="../shared/scanner-ui.css">
-    
-    <link rel="stylesheet" href="style.css?v=30.22">
+    <link rel="stylesheet" href="style.css?v=50.0">
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
@@ -26,209 +23,52 @@
     <input type="file" id="camera-input" accept="image/*" style="display: none;">
 
     <div class="dashboard-container">
-        
-        <button class="top-corner-btn" id="btn-info" style="left: 20px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-        </button>
+        <button class="top-corner-btn" id="btn-info" style="left: 20px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg></button>
+        <button class="top-corner-btn" id="btn-settings" style="right: 20px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>
 
-        <button class="top-corner-btn" id="btn-settings" style="right: 20px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-        </button>
-
-        <div class="top-section">
-            <button id="btn-snap" class="aperture-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="14.31" y1="8" x2="20.05" y2="17.94"></line>
-                    <line x1="9.69" y1="8" x2="21.17" y2="8"></line>
-                    <line x1="7.38" y1="12" x2="13.12" y2="2.06"></line>
-                    <line x1="9.69" y1="16" x2="3.95" y2="6.06"></line>
-                    <line x1="14.31" y1="16" x2="2.83" y2="16"></line>
-                    <line x1="16.62" y1="12" x2="10.88" y2="21.94"></line>
-                </svg>
-            </button>
-        </div>
+        <div class="top-section"><button id="btn-snap" class="aperture-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg></button></div>
 
         <div class="dials-row">
-            <div class="dial-container">
-                <div class="dial-svg-wrapper" id="tip-wrapper">
-                    <svg viewBox="0 0 100 100">
-                        <circle class="dial-bg" cx="50" cy="50" r="38"></circle>
-                        <circle class="dial-progress" id="tip-ring" cx="50" cy="50" r="38"></circle>
-                        <circle class="dial-thumb" id="tip-thumb" cx="50" cy="12" r="5"></circle>
-                    </svg>
-                    <div class="dial-inner-content">
-                        <span class="dial-inner-label">TIP</span>
-                        <div class="dial-center-text" id="tip-display">0%</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="dial-container">
-                <div class="dial-svg-wrapper" id="split-wrapper">
-                    <svg viewBox="0 0 100 100">
-                        <circle class="dial-bg" cx="50" cy="50" r="38"></circle>
-                        <circle class="dial-progress" id="split-ring" cx="50" cy="50" r="38"></circle>
-                        <circle class="dial-thumb" id="split-thumb" cx="50" cy="12" r="5"></circle>
-                    </svg>
-                    <div class="dial-inner-content">
-                        <span class="dial-inner-label">SPLIT</span>
-                        <div class="dial-center-text" id="split-display">1</div>
-                    </div>
-                </div>
-            </div>
+            <div class="dial-container"><div class="dial-svg-wrapper" id="tip-wrapper"><svg viewBox="0 0 100 100"><circle class="dial-bg" cx="50" cy="50" r="38"></circle><circle class="dial-progress" id="tip-ring" cx="50" cy="50" r="38"></circle><circle class="dial-thumb" id="tip-thumb" cx="50" cy="12" r="5"></circle></svg><div class="dial-inner-content"><span class="dial-inner-label">TIP</span><div class="dial-center-text" id="tip-display">0%</div></div></div></div>
+            <div class="dial-container"><div class="dial-svg-wrapper" id="split-wrapper"><svg viewBox="0 0 100 100"><circle class="dial-bg" cx="50" cy="50" r="38"></circle><circle class="dial-progress" id="split-ring" cx="50" cy="50" r="38"></circle><circle class="dial-thumb" id="split-thumb" cx="50" cy="12" r="5"></circle></svg><div class="dial-inner-content"><span class="dial-inner-label">SPLIT</span><div class="dial-center-text" id="split-display">1</div></div></div></div>
         </div>
 
-        <div class="center-result-section">
-            <div class="result-orb" id="result-orb">
-                <div class="orb-glare"></div>
-                <div class="orb-content">
-                    <span class="orb-label">PER PERSON</span>
-                    <h1 class="orb-amount" id="per-person-amount">$0.00</h1>
-                </div>
-            </div>
-        </div>
+        <div class="center-result-section"><div class="result-orb" id="result-orb"><div class="orb-glare"></div><div class="orb-content"><span class="orb-label">PER PERSON</span><h1 class="orb-amount" id="per-person-amount">$0.00</h1></div></div></div>
 
         <div class="bottom-controls-row">
             <div class="manual-panel">
                 <div class="glass-box">
-                    <div class="input-line title-line" style="margin-bottom: 5px;">
-                        <input type="text" id="manual-title" placeholder="Optional: Name of the bill (e.g. McDonald's)">
-                    </div>
+                    <div class="input-line title-line" style="margin-bottom: 5px;"><input type="text" id="manual-title" placeholder="Optional: Name of the bill (e.g. McDonald's)"></div>
                     <div class="divider"></div>
-
-                    <div class="input-line">
-                        <label>Subtotal</label>
-                        <div class="input-with-symbol">
-                            <span>$</span>
-                            <input type="number" id="manual-subtotal" placeholder="0.00" step="0.01">
-                        </div>
-                    </div>
+                    <div class="input-line"><label>Subtotal</label><div class="input-with-symbol"><span>$</span><input type="number" id="manual-subtotal" placeholder="0.00" step="0.01"></div></div>
                     <div class="divider"></div>
-                    <div class="input-line">
-                        <label id="tax-label">Tax</label>
-                        <div class="input-with-symbol">
-                            <span>$</span>
-                            <input type="number" id="manual-tax" placeholder="0.00" step="0.01">
-                        </div>
-                    </div>
-
+                    <div class="input-line"><label id="tax-label">Tax</label><div class="input-with-symbol"><span>$</span><input type="number" id="manual-tax" placeholder="0.00" step="0.01"></div></div>
                     <div class="divider"></div>
-                    <div class="input-line">
-                        <label id="summary-tip-label">Tip (0%)</label>
-                        <div class="input-with-symbol">
-                            <span>$</span>
-                            <input type="text" id="summary-tip-amount" value="0.00" readonly tabindex="-1" style="pointer-events: none;">
-                        </div>
-                    </div>
+                    <div class="input-line"><label id="summary-tip-label">Tip (0%)</label><div class="input-with-symbol"><span>$</span><input type="text" id="summary-tip-amount" value="0.00" readonly tabindex="-1" style="pointer-events: none;"></div></div>
                     <div class="divider"></div>
-                    <div class="input-line">
-                        <label>Total</label>
-                        <div class="input-with-symbol">
-                            <span>$</span>
-                            <input type="text" id="summary-total-amount" value="0.00" readonly tabindex="-1" style="pointer-events: none;">
-                        </div>
-                    </div>
+                    <div class="input-line"><label>Total</label><div class="input-with-symbol"><span>$</span><input type="text" id="summary-total-amount" value="0.00" readonly tabindex="-1" style="pointer-events: none;"></div></div>
                 </div>
             </div>
-
             <div class="actions-panel">
-                <div class="action-wrapper">
-                    <button class="action-circle-btn share-btn" id="btn-share">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;">
-                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-                            <polyline points="16 6 12 2 8 6"></polyline>
-                            <line x1="12" y1="2" x2="12" y2="15"></line>
-                        </svg>
-                    </button>
-                </div>
-                
-                <div class="action-wrapper">
-                    <button class="action-circle-btn done-btn" id="btn-done">
-                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </button>
-                </div>
+                <div class="action-wrapper"><button class="action-circle-btn share-btn" id="btn-share"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg></button></div>
+                <div class="action-wrapper"><button class="action-circle-btn done-btn" id="btn-done"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><polyline points="20 6 9 17 4 12"></polyline></svg></button></div>
             </div>
         </div>
     </div>
 
-    <div id="info-modal" class="modal-overlay hidden">
-        <div class="glass-modal-card">
-            <h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3>
-            <div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;">
-                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);">
-                    <span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span>
-                    <span style="font-weight: 600; color: #fff;">V30.22 (Shared Scanner UI)</span>
-                </div>
-                <div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);">
-                    <span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span>
-                    <span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span>
-                </div>
-            </div>
-            <div style="width: 100%; margin-top: 20px;">
-                <button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="settings-modal" class="modal-overlay hidden">
-        <div class="glass-modal-card" style="max-height: 90vh; overflow-y: auto;">
-            <h3 class="modal-title" style="margin-bottom: 25px;">Setup Profile</h3>
-            <div class="modal-content" style="gap: 15px; display: flex; flex-direction: column; width: 100%;">
-                <div class="modal-input-glass">
-                    <label>Name</label>
-                    <input type="text" id="settings-name-input" placeholder="Name">
-                </div>
-                <div class="modal-input-glass">
-                    <label>Venmo ID</label>
-                    <input type="text" id="settings-venmo-input" placeholder="Without @">
-                </div>
-                <div class="modal-input-glass">
-                    <label>Zelle</label>
-                    <input type="text" id="settings-zelle-input" placeholder="Phone/Email">
-                </div>
-                <div class="modal-input-glass">
-                    <label>WeChat</label>
-                    <input type="text" id="settings-wechat-input" placeholder="WeChat ID">
-                </div>
-                <div class="modal-input-glass">
-                    <label>PayPal</label>
-                    <input type="text" id="settings-paypal-input" placeholder="Username">
-                </div>
-            </div>
-            <div style="display: flex; gap: 10px; width: 100%; margin-top: 20px;">
-                <button class="modal-close-btn" id="btn-settings-cancel" style="background: #21242D; color: #fff;">Cancel</button>
-                <button class="modal-close-btn" id="btn-settings-save">Save Profile</button>
-            </div>
-        </div>
-    </div>
-
+    <div id="info-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3><div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;"><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">V50.0 (Shared UI)</span></div><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span></div></div><div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div></div></div>
+    <div id="settings-modal" class="modal-overlay hidden"><div class="glass-modal-card" style="max-height: 90vh; overflow-y: auto;"><h3 class="modal-title" style="margin-bottom: 25px;">Setup Profile</h3><div class="modal-content" style="gap: 15px; display: flex; flex-direction: column; width: 100%;"><div class="modal-input-glass"><label>Name</label><input type="text" id="settings-name-input" placeholder="Name"></div><div class="modal-input-glass"><label>Venmo ID</label><input type="text" id="settings-venmo-input" placeholder="Without @"></div><div class="modal-input-glass"><label>Zelle</label><input type="text" id="settings-zelle-input" placeholder="Phone/Email"></div><div class="modal-input-glass"><label>WeChat</label><input type="text" id="settings-wechat-input" placeholder="WeChat ID"></div><div class="modal-input-glass"><label>PayPal</label><input type="text" id="settings-paypal-input" placeholder="Username"></div></div><div style="display: flex; gap: 10px; width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-settings-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-settings-save">Save Profile</button></div></div></div>
+    
     <div id="crop-modal" class="modal-overlay hidden">
         <div class="crop-hint">Crop to include items, Subtotal, Tax & Total</div>
-        <div class="crop-container">
-            <img id="crop-image" src="" alt="Cropper">
-        </div>
+        <div class="crop-container"><img id="crop-image" src="" alt="Cropper"></div>
         <div class="crop-actions">
             <button class="crop-btn cancel" id="btn-crop-cancel">Cancel</button>
             <button class="crop-btn confirm" id="btn-crop-confirm">Analyze</button>
         </div>
     </div>
-
-    <div id="custom-modal" class="modal-overlay hidden">
-        <div class="glass-modal-card">
-            <h3 class="modal-title" id="modal-title">Notice</h3>
-            <div class="modal-content" id="modal-content"></div>
-            <button class="modal-close-btn" id="modal-close-btn">OK</button>
-        </div>
-    </div>
-
-    <script type="module" src="app.js?v=30.22"></script>
+    
+    <div id="custom-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" id="modal-title">Notice</h3><div class="modal-content" id="modal-content"></div><button class="modal-close-btn" id="modal-close-btn">OK</button></div></div>
+    <script type="module" src="app.js?v=50.0"></script>
 </body>
 </html>

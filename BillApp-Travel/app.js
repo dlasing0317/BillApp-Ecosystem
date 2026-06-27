@@ -1,5 +1,5 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V42.4)
+// 🌟 FIREBASE SETUP & IMPORT (V50.0)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -182,7 +182,7 @@ document.getElementById('btn-basic-save').addEventListener('click', async () => 
 });
 
 // ==========================================
-// 🌟 SCANNER / ORB LOGIC (V42.4)
+// 🌟 SCANNER / ORB LOGIC (V50)
 // ==========================================
 const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-next'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const assignmentModal = document.getElementById('assignment-modal'); const expenseTitleInput = document.getElementById('expense-title'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image');
 let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 5; let globalSplitValue = 1;
@@ -301,7 +301,7 @@ document.getElementById('btn-done').addEventListener('click', () => { manualSubt
 autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender();
 
 // ==========================================
-// 🌟 V42.4: PAINTBRUSH MODE LOGIC (獨立總數版)
+// 🌟 V50.0: PAINTBRUSH MODE LOGIC
 // ==========================================
 let parsedItemsData = [];
 let currentBrushUser = null; 
@@ -327,33 +327,15 @@ function renderAvatarDock() {
     const dockContainer = document.getElementById('avatar-dock-container'); dockContainer.innerHTML = '';
     tripMembersForSplit.forEach(member => {
         const initial = member.charAt(0).toUpperCase(); const isMe = member === getCurrentUser();
-        
-        // Wrapper 包住頭像同銀碼
-        const wrapper = document.createElement('div');
-        wrapper.className = 'dock-avatar-wrapper';
-        
-        // 頭像
-        const avatarDiv = document.createElement('div'); 
-        avatarDiv.className = `dock-avatar ${member === currentBrushUser ? 'active-brush' : ''}`; 
-        avatarDiv.innerHTML = initial;
+        const wrapper = document.createElement('div'); wrapper.className = 'dock-avatar-wrapper';
+        const avatarDiv = document.createElement('div'); avatarDiv.className = `dock-avatar ${member === currentBrushUser ? 'active-brush' : ''}`; avatarDiv.innerHTML = initial;
         if (member === currentBrushUser) { avatarDiv.style.background = isMe ? 'var(--accent-blue)' : '#E5E7EB'; avatarDiv.style.color = '#000'; }
         
-        // 獨立銀碼
-        const amountDiv = document.createElement('div');
-        amountDiv.className = 'avatar-amount';
-        amountDiv.id = `amount-${member.replace(/\s+/g, '-')}`; // 安全 ID
-        amountDiv.textContent = '$0.00';
+        const amountDiv = document.createElement('div'); amountDiv.className = 'avatar-amount'; amountDiv.id = `amount-${member.replace(/\s+/g, '-')}`; amountDiv.textContent = '$0.00';
         if (member === currentBrushUser) { amountDiv.style.color = isMe ? 'var(--accent-blue)' : '#E5E7EB'; }
 
-        avatarDiv.addEventListener('click', () => { 
-            currentBrushUser = member; 
-            renderAvatarDock(); 
-            updateItemizedMath(); // 確保轉人嗰陣銀碼唔會消失
-        });
-        
-        wrapper.appendChild(avatarDiv);
-        wrapper.appendChild(amountDiv);
-        dockContainer.appendChild(wrapper);
+        avatarDiv.addEventListener('click', () => { currentBrushUser = member; renderAvatarDock(); updateItemizedMath(); });
+        wrapper.appendChild(avatarDiv); wrapper.appendChild(amountDiv); dockContainer.appendChild(wrapper);
     });
 }
 
@@ -362,21 +344,16 @@ function renderScannedItems() {
     parsedItemsData.forEach((item) => {
         const itemRow = document.createElement('div'); itemRow.className = 'item-row';
         let avatarsHTML = '';
-        
         if (item.assignedTo.length === 0) {
             avatarsHTML = `<div style="width: 28px; height: 28px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.2);"></div>`;
         } else {
             item.assignedTo.forEach((assignee, i) => { 
-                const isMe = assignee === getCurrentUser(); const bgCol = isMe ? 'var(--accent-blue)' : '#E5E7EB'; 
-                const marginLeft = i === 0 ? '0' : '-10px';
+                const isMe = assignee === getCurrentUser(); const bgCol = isMe ? 'var(--accent-blue)' : '#E5E7EB'; const marginLeft = i === 0 ? '0' : '-10px';
                 avatarsHTML += `<div class="mini-avatar" style="background: ${bgCol}; margin-left: ${marginLeft}; z-index: ${i};">${assignee.charAt(0).toUpperCase()}</div>`; 
             });
         }
-
         itemRow.innerHTML = `
-            <div style="pointer-events: none; display: flex; flex-direction: row; align-items: center; width: 45px; justify-content: flex-start;">
-                ${avatarsHTML}
-            </div>
+            <div style="pointer-events: none; display: flex; flex-direction: row; align-items: center; width: 45px; justify-content: flex-start;">${avatarsHTML}</div>
             <div style="flex: 1; pointer-events: none; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
                 <div style="color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">${item.name}</div>
                 <div style="color: var(--text-dim); font-size: 1rem; font-weight: 500;">$${item.price.toFixed(2)}</div>
@@ -393,18 +370,13 @@ function renderScannedItems() {
 }
 
 function updateItemizedMath() {
-    let userTotals = {};
-    tripMembersForSplit.forEach(m => userTotals[m] = 0);
-    
+    let userTotals = {}; tripMembersForSplit.forEach(m => userTotals[m] = 0);
     parsedItemsData.forEach(item => {
         if (item.assignedTo.length > 0) { 
             const splitPrice = item.price / item.assignedTo.length;
-            item.assignedTo.forEach(assignee => {
-                if (userTotals[assignee] !== undefined) { userTotals[assignee] += splitPrice; }
-            });
+            item.assignedTo.forEach(assignee => { if (userTotals[assignee] !== undefined) { userTotals[assignee] += splitPrice; } });
         }
     });
-
     tripMembersForSplit.forEach(member => {
         const amountNode = document.getElementById(`amount-${member.replace(/\s+/g, '-')}`);
         if (amountNode) { amountNode.textContent = `$${userTotals[member].toFixed(2)}`; }

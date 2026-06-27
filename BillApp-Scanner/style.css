@@ -1,158 +1,44 @@
 /* ==========================================
-   📸 BillApp-Scanner 專屬樣式 (style.css)
-   (全域樣式 -> shared/core-ui.css)
-   (掃描器 3D/發光外觀 -> shared/scanner-ui.css)
+   📸 BillApp-Scanner 專屬樣式 (style.css v50)
+   (已移除 Crop 及全域樣式，統一由 shared/ 管理)
    ========================================== */
-
 button, input, .dial-svg-wrapper, .action-circle-btn, svg {
     touch-action: manipulation !important;
 }
 
 .dashboard-container {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; 
+    width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; 
     padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px);
 }
-
 .top-corner-btn {
-    position: absolute;
-    top: calc(env(safe-area-inset-top) + 20px);
-    background: transparent;
-    border: none;
-    color: var(--text-dim);
-    width: 50px;
-    height: 50px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    z-index: 9999;
-    transition: color 0.2s, transform 0.2s;
+    position: absolute; top: calc(env(safe-area-inset-top) + 20px); background: transparent; border: none; color: var(--text-dim); width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 9999; transition: color 0.2s, transform 0.2s;
 }
 .top-corner-btn svg { width: 24px; height: 24px; pointer-events: none; }
 .top-corner-btn:active { transform: scale(0.9); color: var(--accent-blue); filter: drop-shadow(0 0 8px var(--accent-glow)); }
 
-.top-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* 保留 Aperture Button 嘅獨立大細同動畫 (因為 Standalone 版粒掣特別大) */
-.aperture-btn {
-    width: clamp(90px, 12vh, 120px);
-    height: clamp(90px, 12vh, 120px);
-    border-radius: 50%;
-    background: linear-gradient(145deg, #1E293B, #0F172A);
-    border: 2px solid var(--track-color);
-    color: var(--text-dim);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    transition: all 0.2s;
-}
-.aperture-btn svg { width: 85%; height: 85%; stroke-width: 1px; }
-.aperture-btn:active { transform: scale(0.95); border-color: var(--accent-blue); color: var(--accent-blue); background: linear-gradient(145deg, #0F172A, #1E293B); box-shadow: 0 0 40px var(--accent-glow), inset 0 2px 5px rgba(255,255,255,0.2); }
-.aperture-btn.scanning { color: var(--accent-blue); border-color: var(--accent-blue); animation: pulseScan 1.5s infinite; }
-@keyframes pulseScan { 0% { box-shadow: 0 0 0 0 var(--accent-glow), inset 0 4px 10px rgba(255,255,255,0.2); } 70% { box-shadow: 0 0 0 20px rgba(125, 211, 252, 0), inset 0 4px 10px rgba(255,255,255,0.2); } 100% { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0), inset 0 4px 10px rgba(255,255,255,0.2); } }
-
-.dials-row {
-    width: 100%;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-}
-
-.dial-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 130px;
-}
-
-.dial-svg-wrapper {
-    position: relative;
-    width: clamp(100px, 14vh, 130px);
-    height: clamp(100px, 14vh, 130px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    touch-action: none;
-    cursor: grab;
-}
+.top-section { display: flex; justify-content: center; align-items: center; }
+.dials-row { width: 100%; display: flex; justify-content: space-around; align-items: center; }
+.dial-container { display: flex; flex-direction: column; align-items: center; width: 130px; }
+.dial-svg-wrapper { position: relative; width: clamp(100px, 14vh, 130px); height: clamp(100px, 14vh, 130px); display: flex; justify-content: center; align-items: center; touch-action: none; cursor: grab; }
 .dial-svg-wrapper:active { cursor: grabbing; }
-
 .dial-svg-wrapper svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(135deg); overflow: visible; pointer-events: none; }
-
-/* 🌟 已精簡：顏色、發光、邊框已經交畀 shared/scanner-ui.css，呢度只保留邏輯動畫 */
-.dial-progress { transition: stroke-dashoffset 0.05s linear; }
-.dial-thumb { transition: cx 0.05s linear, cy 0.05s linear; }
-
 .dial-inner-content { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; pointer-events: none; }
 .dial-inner-label { font-size: 0.75rem; color: var(--text-dim); letter-spacing: 1px; margin-bottom: -2px; text-transform: uppercase; }
 .dial-center-text { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
+.center-result-section { display: flex; justify-content: center; align-items: center; width: 100%; }
 
-.center-result-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-}
-
-/* 🌟 已精簡：3D特效交畀 shared/scanner-ui.css，呢度只保留結構 */
-.result-orb {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s;
-}
-
-.orb-glare { position: absolute; top: 1%; left: 15%; width: 70%; height: 40%; border-radius: 50%; background: radial-gradient(ellipse at 50% 10%, rgba(255,255,255,0.3) 0%, transparent 70%); pointer-events: none; }
-.result-orb.inactive { border: 1px solid var(--track-color); background: var(--bg-main); box-shadow: inset 0 2px 5px rgba(255,255,255,0.05), inset 0 -20px 40px rgba(0,0,0,0.8); }
-.result-orb.inactive .orb-glare { opacity: 0.1; }
-.result-orb.inactive .orb-amount { color: var(--text-dim); }
-
-.orb-content { display: flex; flex-direction: column; align-items: center; z-index: 2; width: 100%;}
-.orb-label { font-size: 0.8rem; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-.orb-amount { font-size: clamp(3rem, 5vh, 4rem); font-weight: 700; color: var(--text-main); letter-spacing: -1px; text-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: font-size 0.2s ease-out; }
-
-.bottom-controls-row {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    gap: 15px; 
-}
-
+.bottom-controls-row { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 15px; }
 .manual-panel { width: 100%; display: flex; flex-direction: column; }
-
 .input-line { display: flex; justify-content: space-between; align-items: center; }
 .input-line label { color: var(--text-dim); font-size: 0.95rem; transition: color 0.3s; }
 .input-with-symbol { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
 .input-with-symbol span { color: var(--text-dim); font-size: 1.1rem; font-weight: 600; }
-
 #manual-title { width: 100%; background: transparent; border: none; color: var(--text-main); font-size: 1rem; font-weight: 500; text-align: left; outline: none; padding: 2px 0; }
 #manual-title::placeholder { color: var(--text-dim); font-weight: 400; opacity: 0.7; }
 .input-with-symbol input { background: transparent; border: none; color: var(--text-dim); font-size: 1.1rem; font-weight: 600; text-align: left; outline: none; font-variant-numeric: tabular-nums; width: 45px; transition: width 0.1s ease-out; }
 .input-with-symbol input::placeholder { color: var(--text-dim); opacity: 1; }
 .input-with-symbol input[type=number]::-webkit-inner-spin-button, .input-with-symbol input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .divider { height: 1px; background: rgba(255,255,255,0.05); width: 100%; }
-
-/* 🌟 已精簡：動作按鈕嘅樣式交畀 shared/scanner-ui.css，呢度只保留點擊特效 */
+.actions-panel { display: flex; flex-direction: row; justify-content: space-around; width: 100%; padding: 0 10px; }
 .action-wrapper { width: 190px; display: flex; justify-content: center; align-items: center; }
-.action-circle-btn { transition: all 0.2s; }
-.action-circle-btn:active { transform: scale(0.9); border-color: var(--accent-blue); box-shadow: 0 0 20px var(--accent-glow), inset 0 2px 5px rgba(255,255,255,0.2); color: var(--accent-blue); }
-
 .modal-content div[style*="background: #f4f7fb"] { background: #0A0C10 !important; border: 1px solid #2A2E38 !important; border-radius: 12px;}
-
-.crop-container { width: 100%; height: calc(100dvh - 100px); background: #000; display: flex; align-items: center; }
-#crop-image { max-width: 100%; max-height: 100%; }
-.crop-actions { position: absolute; bottom: 0; width: 100%; height: 100px; background: #0F172A; display: flex; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid #1E293B; }
-.crop-btn { padding: 15px 35px; border-radius: 25px; font-weight: bold; border: none; font-size: 1.1rem; cursor: pointer; }
-.crop-btn.cancel { background: #1E293B; color: #fff; }
-.crop-btn.confirm { background: #E5E7EB; color: #000; }
-.crop-hint { position: absolute; top: calc(env(safe-area-inset-top) + 20px); left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 20px; color: #FFFFFF; font-size: 1rem; font-weight: 600; z-index: 10; pointer-events: none; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5); letter-spacing: 0.5px; }
