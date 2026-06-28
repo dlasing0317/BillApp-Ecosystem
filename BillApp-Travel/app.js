@@ -1,5 +1,5 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V52.0 - Gratuity Fix)
+// 🌟 FIREBASE SETUP & IMPORT (V54.0 - Auto-Gratuity Lock)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -182,18 +182,18 @@ document.getElementById('btn-basic-save').addEventListener('click', async () => 
 });
 
 // ==========================================
-// 🌟 SCANNER / ORB LOGIC (V52.0)
+// 🌟 SCANNER / ORB LOGIC (V54.0)
 // ==========================================
 const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-next'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const assignmentModal = document.getElementById('assignment-modal'); const expenseTitleInput = document.getElementById('expense-title'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image');
 let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 5; let globalSplitValue = 1;
 
-let exactTipAmount = null; // 🌟 存放單據上的真實 Gratuity
-let isSystemUpdatingDial = false; // 🌟 防止轉盤打交
+let exactTipAmount = null; 
+let isSystemUpdatingDial = false;
 
 let globalParsedItems = []; 
 function parseReceiptItems(text) {
     const lines = text.split('\n'); const items = []; let idCounter = 1;
-    const ignoreWords = ['subtotal', 'tax', 'total', 'tip', 'change', 'cash', 'visa', 'mastercard', 'amex', 'due', 'balance', 'guest', 'table', 'terminal', 'inv#', 'description', 'price', 'dine-in', 'yumee'];
+    const ignoreWords = ['subtotal', 'sub/ttl', 'sub ttl', 'tax', 'total', 'tip', 'grat', 'change', 'cash', 'visa', 'mastercard', 'amex', 'due', 'balance', 'guest', 'table', 'terminal', 'inv#', 'description', 'price', 'dine-in', 'yumee', 'check'];
     lines.forEach(line => {
         const cleanLine = line.trim(); if (!cleanLine) return; const lowerLine = cleanLine.toLowerCase(); if (ignoreWords.some(word => lowerLine.includes(word))) return;
         const priceRegex = /(?:\$?\s*)(\d{1,4}(?:,\d{3})*\.\d{2})(?!\d)/; const match = cleanLine.match(priceRegex);
@@ -201,7 +201,7 @@ function parseReceiptItems(text) {
             const priceVal = parseFloat(match[1].replace(',', ''));
             if (priceVal > 0 && priceVal < 500) {
                 let name = cleanLine.replace(match[0], '').trim(); name = name.replace(/^(\d+\s*x?\s*)/i, '').trim(); 
-                name = name.replace(/^[-.,:;!@#$%^&*()_+=\[\]{}|\\<>\/?]+/g, '').trim(); // 支援中文名，只除怪標點
+                name = name.replace(/^[-.,:;!@#$%^&*()_+=\[\]{}|\\<>\/?]+/g, '').trim(); 
                 if (name.length >= 1) { items.push({ id: 'item_' + idCounter++, name: name, price: priceVal, assignedTo: [] }); }
             }
         }
@@ -230,22 +230,26 @@ if(btnModeSimple && btnModeItemized) {
 function calculateAndRender() {
     const sub = parseFloat(manualSubtotalInput.value) || 0; const tax = parseFloat(manualTaxInput.value) || 0; scannedSubtotal = sub; scannedTax = tax;
     
-    let tipAmount = 0;
-    let tipPctDisplay = globalTipValue;
+    let tipAmount = 0; 
+    const tipWrapper = document.getElementById('tip-wrapper');
+    const tipDisplay = document.getElementById('tip-display');
+    const summaryTipLabel = document.getElementById('summary-tip-label');
 
     if (exactTipAmount !== null && exactTipAmount > 0) {
         tipAmount = exactTipAmount;
-        if (scannedSubtotal > 0) tipPctDisplay = (tipAmount / scannedSubtotal) * 100;
+        if (summaryTipLabel) summaryTipLabel.textContent = `Tip (Incl.)`;
+        if (tipDisplay) tipDisplay.textContent = 'INCL';
+        if (tipWrapper) { tipWrapper.style.pointerEvents = 'none'; tipWrapper.style.opacity = '0.5'; }
     } else {
         tipAmount = scannedSubtotal * (globalTipValue / 100);
+        if (summaryTipLabel) summaryTipLabel.textContent = `Tip (${globalTipValue}%)`;
+        if (tipDisplay) tipDisplay.textContent = globalTipValue + '%';
+        if (tipWrapper) { tipWrapper.style.pointerEvents = 'auto'; tipWrapper.style.opacity = '1'; }
     }
 
     const taxLabel = document.getElementById('tax-label'); if (sub > 0 && tax > 0) { taxLabel.textContent = `Tax (${((tax / sub) * 100).toFixed(1)}%)`; } else { taxLabel.textContent = 'Tax'; }
     currentGrandTotal = scannedSubtotal + scannedTax + tipAmount; currentPerPerson = currentGrandTotal / globalSplitValue;     
     
-    const summaryTipLabel = document.getElementById('summary-tip-label');
-    if (summaryTipLabel) summaryTipLabel.textContent = `Tip (${typeof tipPctDisplay === 'number' && !Number.isInteger(tipPctDisplay) ? tipPctDisplay.toFixed(1) : Math.round(tipPctDisplay)}%)`;
-
     const summaryTipVal = document.getElementById('summary-tip-val'); const summaryTotalVal = document.getElementById('summary-total-val');
     if (summaryTipVal) summaryTipVal.textContent = `$${tipAmount.toFixed(2)}`;
     if (summaryTotalVal) summaryTotalVal.textContent = `$${currentGrandTotal.toFixed(2)}`;
@@ -253,18 +257,17 @@ function calculateAndRender() {
     const splitContainer = document.getElementById('split-dial-container'); const orbLabel = document.getElementById('orb-dynamic-label'); let displayStr = '$0.00';
     if (isItemizedMode || currentTripMode) { if(splitContainer) { splitContainer.style.opacity = '0.2'; splitContainer.style.pointerEvents = 'none'; } if(orbLabel) orbLabel.textContent = 'RECEIPT TOTAL'; displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentGrandTotal.toFixed(2)}`; } 
     else { if(splitContainer) { splitContainer.style.opacity = '1'; splitContainer.style.pointerEvents = 'auto'; } if(orbLabel) orbLabel.textContent = 'PER PERSON'; displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentPerPerson.toFixed(2)}`; }
-    
     perPersonAmountDisplay.textContent = displayStr;
     const textLen = displayStr.length; if (textLen > 8) { perPersonAmountDisplay.style.fontSize = '2.8rem'; } else if (textLen > 6) { perPersonAmountDisplay.style.fontSize = '3.5rem'; } else { perPersonAmountDisplay.style.fontSize = '4.5rem'; }
     currentGrandTotal > 0 ? resultOrb.classList.remove('inactive') : resultOrb.classList.add('inactive');
 }
 
-manualSubtotalInput.addEventListener('input', function() { exactTipAmount = null; autoResizeInput(this); calculateAndRender(); }); manualTaxInput.addEventListener('input', function() { autoResizeInput(this); calculateAndRender(); });
+manualSubtotalInput.addEventListener('input', function() { exactTipAmount = null; autoResizeInput(this); calculateAndRender(); }); manualTaxInput.addEventListener('input', function() { exactTipAmount = null; autoResizeInput(this); calculateAndRender(); });
 
 function setupCircularDial(wrapperId, ringId, thumbId, displayId, min, max, step, initialValue, isPercent, onChangeCallback) {
     const wrapper = document.getElementById(wrapperId); const ring = document.getElementById(ringId); const thumb = document.getElementById(thumbId); const display = document.getElementById(displayId);
     let currentValue = initialValue; const r = 38; const cx = 50; const cy = 50; const circumference = 2 * Math.PI * r; const arcDegrees = 270; const arcLength = circumference * (arcDegrees / 360); ring.style.strokeDasharray = `${arcLength} ${circumference}`;
-    function updateUI(val) { const percentage = (val - min) / (max - min); const offset = arcLength - (percentage * arcLength); ring.style.strokeDashoffset = offset; const svgAngleRad = (percentage * arcDegrees) * (Math.PI / 180); thumb.setAttribute('cx', cx + r * Math.cos(svgAngleRad)); thumb.setAttribute('cy', cy + r * Math.sin(svgAngleRad)); display.textContent = val + (isPercent ? '%' : ''); onChangeCallback(val); }
+    function updateUI(val) { const percentage = (val - min) / (max - min); const offset = arcLength - (percentage * arcLength); ring.style.strokeDashoffset = offset; const svgAngleRad = (percentage * arcDegrees) * (Math.PI / 180); thumb.setAttribute('cx', cx + r * Math.cos(svgAngleRad)); thumb.setAttribute('cy', cy + r * Math.sin(svgAngleRad)); if(display.textContent !== 'INCL') display.textContent = val + (isPercent ? '%' : ''); onChangeCallback(val); }
     let isDragging = false; function handlePointer(e) { if (!isDragging && e.type !== 'pointerdown' && e.type !== 'touchstart') return; e.preventDefault(); const rect = wrapper.getBoundingClientRect(); const centerX = rect.left + rect.width / 2; const centerY = rect.top + rect.height / 2; const clientX = e.clientX || (e.touches && e.touches[0].clientX); const clientY = e.clientY || (e.touches && e.touches[0].clientY); if(clientX === undefined || clientY === undefined) return; const dx = clientX - centerX; const dy = clientY - centerY; let angle = Math.atan2(dy, dx) * (180 / Math.PI); if (angle < 0) angle += 360; let adjustedAngle = angle; if (angle < 135) adjustedAngle += 360; let percentage = (adjustedAngle - 135) / arcDegrees; if (percentage < 0) { if (adjustedAngle < 135) percentage = 0; } if (percentage > 1) { if (adjustedAngle > 135 + arcDegrees) percentage = 1; } percentage = Math.max(0, Math.min(1, percentage)); let val = min + percentage * (max - min); val = Math.round(val / step) * step; val = Math.max(min, Math.min(max, val)); if (val !== currentValue) { currentValue = val; updateUI(currentValue); } }
     wrapper.addEventListener('pointerdown', (e) => { isDragging = true; handlePointer(e); wrapper.setPointerCapture(e.pointerId); }); wrapper.addEventListener('pointermove', handlePointer); wrapper.addEventListener('pointerup', (e) => { isDragging = false; wrapper.releasePointerCapture(e.pointerId); }); wrapper.addEventListener('pointercancel', () => { isDragging = false; }); wrapper.addEventListener('touchstart', (e) => { isDragging = true; handlePointer(e); }, {passive: false}); wrapper.addEventListener('touchmove', handlePointer, {passive: false}); wrapper.addEventListener('touchend', () => { isDragging = false; }); updateUI(currentValue); return { setValue: (val) => { currentValue = val; updateUI(val); } };
 }
@@ -278,7 +281,7 @@ const settingsModal = document.getElementById('settings-modal');
 document.getElementById('settings-name-input').value = localStorage.getItem('billapp_user_name') || ''; document.getElementById('settings-venmo-input').value = localStorage.getItem('billapp_venmo_id') || ''; document.getElementById('settings-zelle-input').value = localStorage.getItem('billapp_zelle_id') || '';
 document.getElementById('btn-settings').addEventListener('click', () => { settingsModal.classList.remove('hidden'); }); document.getElementById('btn-settings-cancel').addEventListener('click', () => settingsModal.classList.add('hidden'));
 document.getElementById('btn-settings-save').addEventListener('click', () => { localStorage.setItem('billapp_user_name', document.getElementById('settings-name-input').value.trim()); localStorage.setItem('billapp_venmo_id', document.getElementById('settings-venmo-input').value.trim()); localStorage.setItem('billapp_zelle_id', document.getElementById('settings-zelle-input').value.trim()); settingsModal.classList.add('hidden'); showNoticeModal('Profile Saved', ''); loadTrips(); setupNotifications(); });
-if (document.getElementById('btn-info')) { document.getElementById('btn-info').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('info-modal').classList.remove('hidden'); }); document.getElementById('btn-info-close').addEventListener('click', () => document.getElementById('info-modal').classList.add('hidden')); }
+if (document.getElementById('btn-info')) { document.getElementById('btn-info').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('debug-env').textContent = (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) ? "📱 PWA App" : "🌐 Browser"; document.getElementById('info-modal').classList.remove('hidden'); }); document.getElementById('btn-info-close').addEventListener('click', () => document.getElementById('info-modal').classList.add('hidden')); }
 
 btnSnap.addEventListener('click', () => cameraInput.click()); document.getElementById('btn-crop-cancel').addEventListener('click', () => { cropModal.classList.add('hidden'); if (cropper) cropper.destroy(); cameraInput.value = ''; });
 cameraInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { cropImage.src = e.target.result; cropModal.classList.remove('hidden'); if (cropper) cropper.destroy(); cropper = new Cropper(cropImage, { viewMode: 1, dragMode: 'crop', autoCropArea: 0.8, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false }); }; reader.readAsDataURL(file); });
@@ -293,20 +296,35 @@ document.getElementById('btn-crop-confirm').addEventListener('click', async () =
             let cleanText = result.data.text.replace(/(\d+)\s*[_\.,]\s*(\d+)/g, "$1.$2").replace(/\d+(?:\.\d+)?\s*%/g, ""); 
             globalParsedItems = parseReceiptItems(cleanText);
 
-            // 🌟 V52: 智能擷取 Subtotal, Tax, Gratuity 同 Total
-            const subMatch = cleanText.match(/(?:sub\/?ttl|subtotal|taxable value|net)[^\n\r\d]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
-            const taxMatch = cleanText.match(/(?:surtax|\btax\b|vat)[^\n\r\d]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
-            const tipMatch = cleanText.match(/(?:gratuity|tip|tips|service charge|auto grt)[^\n\r\d]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
-            const totalMatch = cleanText.match(/(?:total due|total amount|\btotal\b)[^\n\r\d]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
+            const subRegex = /(?:sub\s*\/?\s*t(?:o)?t(?:a)?l|subtotal|taxable|net)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
+            const taxRegex = /(?:surtax|\btax\b|vat)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
+            const tipRegex = /(?:gratuity|grat|tip|tips|service charge|auto grt)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
+            const totalRegex = /(?:total due|amount due|total amount|\btotal\b|amount)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
+
+            const subMatch = cleanText.match(subRegex);
+            const taxMatch = cleanText.match(taxRegex);
+            const tipMatch = cleanText.match(tipRegex);
+            const totalMatch = cleanText.match(totalRegex);
 
             let parsedSub = subMatch ? parseFloat(subMatch[1].replace(',', '')) : 0;
             let parsedTax = taxMatch ? parseFloat(taxMatch[1].replace(',', '')) : 0;
             let parsedTip = tipMatch ? parseFloat(tipMatch[1].replace(',', '')) : 0;
             let parsedTotal = totalMatch ? parseFloat(totalMatch[1].replace(',', '')) : 0;
 
+            const allAmounts = [...cleanText.matchAll(/\b\d{1,4}(?:,\d{3})*\.\d{2}\b/g)].map(m => parseFloat(m[0].replace(',', ''))).sort((a, b) => b - a);
+            if (parsedTotal === 0 && allAmounts.length > 0) parsedTotal = allAmounts[0];
+
             if (parsedTotal > 0) {
-                if (parsedSub === 0 && parsedTax > 0) parsedSub = parsedTotal - parsedTax - parsedTip;
-                if (parsedSub > 0 && parsedTax === 0 && parsedTotal > (parsedSub + parsedTip)) parsedTax = parsedTotal - parsedSub - parsedTip;
+                if (parsedSub >= parsedTotal) parsedSub = 0; 
+                if (parsedSub === 0) parsedSub = Math.max(0, parsedTotal - parsedTax - parsedTip); 
+                
+                if (parsedTax === 0 && parsedTotal > (parsedSub + parsedTip) && parsedSub > 0) {
+                    parsedTax = parsedTotal - parsedSub - parsedTip;
+                }
+                if (parsedTip === 0 && parsedTotal > (parsedSub + parsedTax) && parsedSub > 0 && parsedTax > 0) {
+                    const diff = parsedTotal - parsedSub - parsedTax;
+                    if (diff > 1.00) parsedTip = diff; 
+                }
             } else if (parsedSub > 0) {
                 parsedTotal = parsedSub + parsedTax + parsedTip;
             }
@@ -316,13 +334,10 @@ document.getElementById('btn-crop-confirm').addEventListener('click', async () =
                 manualSubtotalInput.value = Math.abs(parseFloat(parsedSub.toFixed(2))); 
                 manualTaxInput.value = Math.abs(parseFloat(parsedTax.toFixed(2))); 
                 
-                // 🌟 V52: 設定精確 Gratuity
                 if (parsedTip > 0) {
                     exactTipAmount = parsedTip;
                     isSystemUpdatingDial = true;
-                    let approxPct = Math.round((parsedTip / parsedSub) * 100);
-                    approxPct = Math.min(Math.max(approxPct, 0), 30);
-                    tipDialControl.setValue(approxPct);
+                    tipDialControl.setValue(0); 
                     exactTipAmount = parsedTip; 
                     isSystemUpdatingDial = false;
                 } else {
@@ -345,7 +360,8 @@ btnNext.addEventListener('click', async () => {
         if (currentTripMode) { expenseTitleInput.value = ''; assignmentModal.classList.remove('hidden'); } 
         else {
             const userName = localStorage.getItem('billapp_user_name') || 'Me'; 
-            const shareText = `🍽️ ${userName} shared a bill\n\n🔹 Subtotal: $${scannedSubtotal.toFixed(2)}\n🔹 Tax: $${scannedTax.toFixed(2)}\n🔹 Tip/Gratuity: $${exactTipAmount ? exactTipAmount.toFixed(2) : (scannedSubtotal * (globalTipValue / 100)).toFixed(2)}\n💰 Total: $${currentGrandTotal.toFixed(2)}\n\n👥 Split: ${globalSplitValue} ppl\n👉 Per Person: $${currentPerPerson.toFixed(2)}`;
+            let tipLabelStr = exactTipAmount !== null ? 'Tip (Incl.)' : `Tip (${globalTipValue}%)`;
+            const shareText = `🍽️ ${userName} shared a bill\n\n🔹 Subtotal: $${scannedSubtotal.toFixed(2)}\n🔹 Tax: $${scannedTax.toFixed(2)}\n🔹 ${tipLabelStr}: $${(exactTipAmount !== null ? exactTipAmount : (scannedSubtotal * (globalTipValue / 100))).toFixed(2)}\n💰 Total: $${currentGrandTotal.toFixed(2)}\n\n👥 Split: ${globalSplitValue} ppl\n👉 Per Person: $${currentPerPerson.toFixed(2)}`;
             if (navigator.share) { try { await navigator.share({ title: `${userName}'s Bill`, text: shareText }); } catch (e) {} } else { navigator.clipboard.writeText(shareText).then(() => { showNoticeModal('Copied', 'Details copied to clipboard.'); }); }
         }
     }
@@ -355,14 +371,14 @@ document.getElementById('btn-assignment-cancel').addEventListener('click', () =>
 document.getElementById('btn-assignment-save').addEventListener('click', async () => {
     const title = expenseTitleInput.value.trim() || 'Untitled Expense'; const activePayer = document.querySelector('#paid-by-container .avatar-bubble.active'); const payerName = activePayer ? activePayer.innerText : 'Unknown';
     const splitNodes = document.querySelectorAll('#split-between-container .avatar-bubble.active'); let splitArray = []; splitNodes.forEach(n => splitArray.push(n.innerText));
-    try { await addDoc(collection(db, `trips/${currentTripId}/expenses`), { title: title, amount: currentGrandTotal, paidBy: payerName, splitBetween: splitArray, splitCount: splitArray.length || 1, createdAt: new Date().toISOString() }); assignmentModal.classList.add('hidden'); manualSubtotalInput.value = ''; manualTaxInput.value = ''; autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); exactTipAmount = null; calculateAndRender(); navigateTo('page-trip'); loadExpenses(currentTripId); } catch (e) { showNoticeModal('Error', 'Failed to save expense'); }
+    try { await addDoc(collection(db, `trips/${currentTripId}/expenses`), { title: title, amount: currentGrandTotal, paidBy: payerName, splitBetween: splitArray, splitCount: splitArray.length || 1, createdAt: new Date().toISOString() }); assignmentModal.classList.add('hidden'); manualSubtotalInput.value = ''; manualTaxInput.value = ''; exactTipAmount = null; autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender(); navigateTo('page-trip'); loadExpenses(currentTripId); } catch (e) { showNoticeModal('Error', 'Failed to save expense'); }
 });
 
 document.getElementById('btn-done').addEventListener('click', () => { manualSubtotalInput.value = ''; manualTaxInput.value = ''; exactTipAmount = null; autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); isSystemUpdatingDial = true; tipDialControl.setValue(5); splitDialControl.setValue(1); isSystemUpdatingDial = false; if (!currentTripMode) navigateTo('page-home'); });
 autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender();
 
 // ==========================================
-// 🌟 V52.0: PAINTBRUSH MODE LOGIC
+// 🌟 V54.0: PAINTBRUSH MODE LOGIC 
 // ==========================================
 let parsedItemsData = []; let currentBrushUser = null; let tripMembersForSplit = [];
 
