@@ -13,7 +13,7 @@ function autoResizeInput(el) { el.style.width = '0px'; el.style.width = Math.max
 // 🤖 核心 AI 視覺解析引擎 (Gemini)
 async function analyzeImageWithGemini(base64Image) {
     // ⚠️ 記得喺度填返你自己嘅 Gemini API Key
-    const apiKey = 'Ab8RN6LpoRYCiKZgsCg0UlYUJviXGQSDJuXEra7EkOu0HTn0UQ'; 
+    const apiKey = 'AQ.Ab8RN6I2N_ssSLuzzl3WLhbkvXlPypbkXbFGHq2em1vt9eoTXQ'; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     // 剷走 'data:image/jpeg;base64,' 前綴
