@@ -1,14 +1,50 @@
 // ==========================================
-// 🌟 V54: Auto-Gratuity Lock & Smart Tip UI (Scanner)
+// 🌟 V100: Gemini AI Vision Engine (Standalone Scanner)
 // ==========================================
 const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-done'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image');
-let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 0; let globalSplitValue = 1;
+let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 5; let globalSplitValue = 1;
 
 let exactTipAmount = null; 
 let isSystemUpdatingDial = false; 
 
 function showNoticeModal(title, msg) { const modal = document.getElementById('custom-modal'); document.getElementById('modal-title').textContent = title; document.getElementById('modal-content').innerHTML = msg; modal.classList.remove('hidden'); document.getElementById('modal-close-btn').onclick = () => modal.classList.add('hidden'); }
 function autoResizeInput(el) { el.style.width = '0px'; el.style.width = Math.max(45, el.scrollWidth + 5) + 'px'; }
+
+// 🤖 核心 AI 視覺解析引擎 (Gemini)
+async function analyzeImageWithGemini(base64Image) {
+    // ⚠️ 記得喺度填返你自己嘅 Gemini API Key
+    const apiKey = 'AQ.Ab8RN6LpoRYCiKZgsCg0UlYUJviXGQSDJuXEra7EkOu0HTn0UQ'; 
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    // 剷走 'data:image/jpeg;base64,' 前綴
+    const base64Data = base64Image.split(',')[1];
+
+    const prompt = `
+    You are an expert accountant. Analyze this receipt image and extract the subtotal, tax, gratuity/tip, and final total.
+    If gratuity, service charge, or auto-gratuity is included, put it in the "gratuity" field.
+    Return strictly a JSON object with no markdown formatting.
+    Use this exact JSON schema:
+    {
+      "subtotal": 0.00,
+      "tax": 0.00,
+      "gratuity": 0.00,
+      "total": 0.00
+    }
+    `;
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [ { text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64Data } } ] }],
+            generationConfig: { response_mime_type: "application/json" } // 強制 AI 只准輸出純 JSON
+        })
+    });
+
+    if (!response.ok) throw new Error('API Request Failed');
+    const data = await response.json();
+    return JSON.parse(data.candidates[0].content.parts[0].text);
+}
 
 function calculateAndRender() {
     const sub = parseFloat(manualSubtotalInput.value) || 0; const tax = parseFloat(manualTaxInput.value) || 0; scannedSubtotal = sub; scannedTax = tax;
@@ -18,7 +54,7 @@ function calculateAndRender() {
     const tipDisplay = document.getElementById('tip-display');
     const summaryTipLabel = document.getElementById('summary-tip-label');
 
-    // 🌟 V54: Auto-Gratuity 智能鎖定 UI
+    // Auto-Gratuity UI Lock
     if (exactTipAmount !== null && exactTipAmount > 0) {
         tipAmount = exactTipAmount;
         if (summaryTipLabel) summaryTipLabel.textContent = `Tip (Incl.)`;
@@ -62,7 +98,7 @@ const tipDialControl = setupCircularDial('tip-wrapper', 'tip-ring', 'tip-thumb',
 const splitDialControl = setupCircularDial('split-wrapper', 'split-ring', 'split-thumb', 'split-display', 1, 20, 1, 1, false, (val) => { globalSplitValue = val; calculateAndRender(); });
 
 const settingsModal = document.getElementById('settings-modal');
-document.getElementById('btn-settings').addEventListener('click', () => { settingsModal.classList.remove('hidden'); }); document.getElementById('btn-settings-cancel').addEventListener('click', () => settingsModal.classList.add('hidden')); document.getElementById('btn-settings-save').addEventListener('click', () => { settingsModal.classList.add('hidden'); });
+document.getElementById('btn-settings').addEventListener('click', () => { settingsModal.classList.remove('hidden'); }); document.getElementById('btn-settings-cancel').addEventListener('click', () => settingsModal.classList.add('hidden'); }); document.getElementById('btn-settings-save').addEventListener('click', () => { settingsModal.classList.add('hidden'); });
 if (document.getElementById('btn-info')) { document.getElementById('btn-info').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('info-modal').classList.remove('hidden'); }); document.getElementById('btn-info-close').addEventListener('click', () => document.getElementById('info-modal').classList.add('hidden')); }
 
 const originalApertureSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>`;
@@ -71,67 +107,52 @@ cameraInput.addEventListener('change', (event) => { const file = event.target.fi
 
 document.getElementById('btn-crop-confirm').addEventListener('click', async () => {
     if (!cropper) return;
-    cropper.getCroppedCanvas({ maxWidth: 1024, maxHeight: 1024 }).toBlob(async (blob) => {
-        cropModal.classList.add('hidden'); cropper.destroy(); btnSnap.classList.add('scanning'); btnSnap.style.pointerEvents = 'none';
-        try {
-            const result = await window.Tesseract.recognize(blob, 'eng+chi_tra+chi_sim'); 
-            let cleanText = result.data.text.replace(/(\d+)\s*[_\.,]\s*(\d+)/g, "$1.$2").replace(/\d+(?:\.\d+)?\s*%/g, ""); 
+    
+    // 將 Crop 完嘅圖轉做 Base64 格式
+    const base64Image = cropper.getCroppedCanvas({ maxWidth: 1024, maxHeight: 1024 }).toDataURL('image/jpeg', 0.8);
+    
+    cropModal.classList.add('hidden'); cropper.destroy(); 
+    btnSnap.classList.add('scanning'); btnSnap.style.pointerEvents = 'none';
+
+    try {
+        // 🚀 將張相掟畀 Gemini AI！
+        const aiResult = await analyzeImageWithGemini(base64Image);
+
+        let parsedSub = aiResult.subtotal || 0;
+        let parsedTax = aiResult.tax || 0;
+        let parsedTip = aiResult.gratuity || 0;
+        let parsedTotal = aiResult.total || 0;
+
+        // 將乾淨嘅數字直接隊入 UI
+        if (parsedSub > 0 || parsedTotal > 0) { 
+            if (parsedSub === 0 && parsedTotal > 0) parsedSub = parsedTotal; 
+            manualSubtotalInput.value = Math.abs(parseFloat(parsedSub.toFixed(2))); 
+            manualTaxInput.value = Math.abs(parseFloat(parsedTax.toFixed(2))); 
             
-            const subRegex = /(?:sub\s*\/?\s*t(?:o)?t(?:a)?l|subtotal|taxable|net)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
-            const taxRegex = /(?:surtax|\btax\b|vat)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
-            const tipRegex = /(?:gratuity|grat|tip|tips|service charge|auto grt)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
-            const totalRegex = /(?:total due|amount due|total amount|\btotal\b|amount)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
-
-            const subMatch = cleanText.match(subRegex);
-            const taxMatch = cleanText.match(taxRegex);
-            const tipMatch = cleanText.match(tipRegex);
-            const totalMatch = cleanText.match(totalRegex);
-
-            let parsedSub = subMatch ? parseFloat(subMatch[1].replace(',', '')) : 0;
-            let parsedTax = taxMatch ? parseFloat(taxMatch[1].replace(',', '')) : 0;
-            let parsedTip = tipMatch ? parseFloat(tipMatch[1].replace(',', '')) : 0;
-            let parsedTotal = totalMatch ? parseFloat(totalMatch[1].replace(',', '')) : 0;
-
-            const allAmounts = [...cleanText.matchAll(/\b\d{1,4}(?:,\d{3})*\.\d{2}\b/g)].map(m => parseFloat(m[0].replace(',', ''))).sort((a, b) => b - a);
-            if (parsedTotal === 0 && allAmounts.length > 0) parsedTotal = allAmounts[0];
-
-            if (parsedTotal > 0) {
-                if (parsedSub >= parsedTotal) parsedSub = 0; 
-                if (parsedSub === 0) parsedSub = Math.max(0, parsedTotal - parsedTax - parsedTip); 
-                
-                if (parsedTax === 0 && parsedTotal > (parsedSub + parsedTip) && parsedSub > 0) {
-                    parsedTax = parsedTotal - parsedSub - parsedTip;
-                }
-                if (parsedTip === 0 && parsedTotal > (parsedSub + parsedTax) && parsedSub > 0 && parsedTax > 0) {
-                    const diff = parsedTotal - parsedSub - parsedTax;
-                    if (diff > 1.00) parsedTip = diff; 
-                }
-            } else if (parsedSub > 0) {
-                parsedTotal = parsedSub + parsedTax + parsedTip;
+            // 處理 Auto-Gratuity 鎖定
+            if (parsedTip > 0) {
+                exactTipAmount = parsedTip;
+                isSystemUpdatingDial = true;
+                tipDialControl.setValue(0); // UI 顯示 INCL
+                exactTipAmount = parsedTip; 
+                isSystemUpdatingDial = false;
+            } else {
+                exactTipAmount = null;
+                isSystemUpdatingDial = true;
+                tipDialControl.setValue(5); // 預設 5% Tip
+                isSystemUpdatingDial = false;
             }
 
-            if (parsedSub > 0 || parsedTotal > 0) { 
-                if (parsedSub === 0 && parsedTotal > 0) parsedSub = parsedTotal; 
-                manualSubtotalInput.value = Math.abs(parseFloat(parsedSub.toFixed(2))); 
-                manualTaxInput.value = Math.abs(parseFloat(parsedTax.toFixed(2))); 
-                
-                if (parsedTip > 0) {
-                    exactTipAmount = parsedTip;
-                    isSystemUpdatingDial = true;
-                    tipDialControl.setValue(0); // 清空轉盤視覺效果，改由 calculateAndRender 接管 INCL
-                    exactTipAmount = parsedTip; 
-                    isSystemUpdatingDial = false;
-                } else {
-                    exactTipAmount = null;
-                    isSystemUpdatingDial = true;
-                    tipDialControl.setValue(0);
-                    isSystemUpdatingDial = false;
-                }
-
-                autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender(); 
-            } else { showNoticeModal('No Amount Found', 'Please try cropping closer to the Subtotal and Tax.'); }
-        } catch (error) { showNoticeModal('Error', 'Recognition failed. Try again.'); } finally { btnSnap.innerHTML = originalApertureSVG; btnSnap.classList.remove('scanning'); btnSnap.style.pointerEvents = 'auto'; cameraInput.value = ''; }
-    }, 'image/jpeg'); 
+            autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender(); 
+        } else { 
+            showNoticeModal('No Amount Found', 'AI 搵唔到銀碼，請影得清楚啲！'); 
+        }
+    } catch (error) { 
+        console.error("AI Error:", error);
+        showNoticeModal('Error', 'AI 解析失敗，請檢查 API Key 或網絡連線。'); 
+    } finally { 
+        btnSnap.innerHTML = originalApertureSVG; btnSnap.classList.remove('scanning'); btnSnap.style.pointerEvents = 'auto'; cameraInput.value = ''; 
+    }
 });
 
 btnNext.addEventListener('click', () => { 
@@ -139,10 +160,10 @@ btnNext.addEventListener('click', () => {
     autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); 
     isSystemUpdatingDial = true; tipDialControl.setValue(0); splitDialControl.setValue(1); isSystemUpdatingDial = false;
 });
+
 document.getElementById('btn-share').addEventListener('click', async () => {
     if (currentGrandTotal === 0) { showNoticeModal('Empty Bill', '大佬，未入銀碼喎！'); return; }
-    let tipLabelStr = exactTipAmount !== null ? 'Tip (Incl.)' : `Tip (${globalTipValue}%)`;
-    const shareText = `🍽️ Bill Shared\n🔹 Subtotal: $${scannedSubtotal.toFixed(2)}\n🔹 Tax: $${scannedTax.toFixed(2)}\n🔹 ${tipLabelStr}: $${(exactTipAmount !== null ? exactTipAmount : (scannedSubtotal * (globalTipValue / 100))).toFixed(2)}\n💰 Total: $${currentGrandTotal.toFixed(2)}\n\n👥 Split: ${globalSplitValue} ppl\n👉 Per Person: $${currentPerPerson.toFixed(2)}`;
+    const shareText = `🍽️ Bill Shared\n🔹 Subtotal: $${scannedSubtotal.toFixed(2)}\n🔹 Tax: $${scannedTax.toFixed(2)}\n🔹 Tip/Gratuity: $${exactTipAmount ? exactTipAmount.toFixed(2) : (scannedSubtotal * (globalTipValue / 100)).toFixed(2)}\n💰 Total: $${currentGrandTotal.toFixed(2)}\n\n👥 Split: ${globalSplitValue} ppl\n👉 Per Person: $${currentPerPerson.toFixed(2)}`;
     if (navigator.share) { try { await navigator.share({ title: `Bill Summary`, text: shareText }); } catch (e) {} } else { navigator.clipboard.writeText(shareText).then(() => { showNoticeModal('Copied', 'Details copied to clipboard.'); }); }
 });
 
