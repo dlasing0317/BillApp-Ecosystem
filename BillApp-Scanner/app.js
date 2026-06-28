@@ -1,423 +1,137 @@
-// 🌟 1. 從 Shared Folder 引入核心 UI 邏輯
-import { 
-    autoResizeInput, 
-    showNoticeModal, 
-    initConfirmModal
-} from '../shared/core-ui.js';
+// ==========================================
+// 🌟 V52: Gratuity & Exact Tip OCR Fix (Scanner)
+// ==========================================
+const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-done'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image');
+let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 5; let globalSplitValue = 1;
 
-// 初始化 Modal Event Listeners (處理 Custom Modal Close 掣)
-initConfirmModal();
+let exactTipAmount = null; // 🌟 存放單據上的真實 Gratuity
+let isSystemUpdatingDial = false; // 🌟 防止轉盤打交
 
-const btnSnap = document.getElementById('btn-snap');
-const cameraInput = document.getElementById('camera-input');
-const resultOrb = document.getElementById('result-orb');
-const perPersonAmountDisplay = document.getElementById('per-person-amount');
-const btnShare = document.getElementById('btn-share');
-const btnDone = document.getElementById('btn-done');
-const manualSubtotalInput = document.getElementById('manual-subtotal');
-const manualTaxInput = document.getElementById('manual-tax');
-const taxLabel = document.getElementById('tax-label');
-
-const manualTitleInput = document.getElementById('manual-title'); 
-const summaryTipLabel = document.getElementById('summary-tip-label');
-const summaryTipAmount = document.getElementById('summary-tip-amount');
-const summaryTotalAmount = document.getElementById('summary-total-amount');
-
-const btnSettings = document.getElementById('btn-settings');
-const settingsModal = document.getElementById('settings-modal');
-const settingsNameInput = document.getElementById('settings-name-input');
-const settingsVenmoInput = document.getElementById('settings-venmo-input');
-const settingsZelleInput = document.getElementById('settings-zelle-input');
-const settingsWechatInput = document.getElementById('settings-wechat-input');
-const settingsPaypalInput = document.getElementById('settings-paypal-input');
-const btnSettingsSave = document.getElementById('btn-settings-save');
-const btnSettingsCancel = document.getElementById('btn-settings-cancel');
-
-const btnInfo = document.getElementById('btn-info');
-const infoModal = document.getElementById('info-modal');
-const btnInfoClose = document.getElementById('btn-info-close');
-const debugEnv = document.getElementById('debug-env');
-
-const cropModal = document.getElementById('crop-modal');
-const cropImage = document.getElementById('crop-image');
-const btnCropCancel = document.getElementById('btn-crop-cancel');
-const btnCropConfirm = document.getElementById('btn-crop-confirm');
-let cropper = null; 
-
-let scannedSubtotal = 0.00; 
-let scannedTax = 0.00;       
-let currentGrandTotal = 0.00; 
-let currentPerPerson = 0.00;  
-let lastScannedImageFile = null; 
-
-let globalTipValue = 0;
-let globalSplitValue = 1;
+function showNoticeModal(title, msg) { const modal = document.getElementById('custom-modal'); document.getElementById('modal-title').textContent = title; document.getElementById('modal-content').innerHTML = msg; modal.classList.remove('hidden'); document.getElementById('modal-close-btn').onclick = () => modal.classList.add('hidden'); }
+function autoResizeInput(el) { el.style.width = '0px'; el.style.width = Math.max(45, el.scrollWidth + 5) + 'px'; }
 
 function calculateAndRender() {
-    const sub = parseFloat(manualSubtotalInput.value) || 0;
-    const tax = parseFloat(manualTaxInput.value) || 0;
-    scannedSubtotal = sub;
-    scannedTax = tax;
+    const sub = parseFloat(manualSubtotalInput.value) || 0; const tax = parseFloat(manualTaxInput.value) || 0; scannedSubtotal = sub; scannedTax = tax;
+    
+    let tipAmount = 0;
+    let tipPctDisplay = globalTipValue;
 
-    if (sub > 0 && tax > 0) {
-        const taxPercent = (tax / sub) * 100;
-        taxLabel.textContent = `Tax (${taxPercent.toFixed(1)}%)`;
+    // 🌟 V52: 如果 OCR 搵到 Gratuity，強制鎖死個 Tip Amount
+    if (exactTipAmount !== null && exactTipAmount > 0) {
+        tipAmount = exactTipAmount;
+        if (scannedSubtotal > 0) tipPctDisplay = (tipAmount / scannedSubtotal) * 100;
     } else {
-        taxLabel.textContent = 'Tax';
+        tipAmount = scannedSubtotal * (globalTipValue / 100);
     }
 
-    const tipAmount = scannedSubtotal * (globalTipValue / 100);
-    currentGrandTotal = scannedSubtotal + scannedTax + tipAmount; 
-    currentPerPerson = currentGrandTotal / globalSplitValue;     
-
-    const displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentPerPerson.toFixed(2)}`;
+    const taxLabel = document.getElementById('tax-label'); if (sub > 0 && tax > 0) { taxLabel.textContent = `Tax (${((tax / sub) * 100).toFixed(1)}%)`; } else { taxLabel.textContent = 'Tax'; }
+    currentGrandTotal = scannedSubtotal + scannedTax + tipAmount; currentPerPerson = currentGrandTotal / globalSplitValue;     
+    
+    const summaryTipLabel = document.getElementById('summary-tip-label');
+    if (summaryTipLabel) summaryTipLabel.textContent = `Tip (${typeof tipPctDisplay === 'number' && !Number.isInteger(tipPctDisplay) ? tipPctDisplay.toFixed(1) : Math.round(tipPctDisplay)}%)`;
+    
+    const summaryTipInput = document.getElementById('summary-tip-amount');
+    const summaryTotalInput = document.getElementById('summary-total-amount');
+    if (summaryTipInput) summaryTipInput.value = tipAmount.toFixed(2);
+    if (summaryTotalInput) summaryTotalInput.value = currentGrandTotal.toFixed(2);
+    
+    const splitContainer = document.getElementById('split-dial-container'); const orbLabel = document.querySelector('.orb-label'); let displayStr = '$0.00';
+    if(splitContainer) { splitContainer.style.opacity = '1'; splitContainer.style.pointerEvents = 'auto'; } 
+    if(orbLabel) orbLabel.textContent = 'PER PERSON'; displayStr = currentGrandTotal === 0 ? `$0.00` : `$${currentPerPerson.toFixed(2)}`; 
+    
     perPersonAmountDisplay.textContent = displayStr;
-    
-    if (summaryTipLabel && summaryTipAmount && summaryTotalAmount) {
-        summaryTipLabel.textContent = `Tip (${globalTipValue}%)`;
-        summaryTipAmount.value = tipAmount.toFixed(2);
-        summaryTotalAmount.value = currentGrandTotal.toFixed(2);
-        
-        autoResizeInput(summaryTipAmount);
-        autoResizeInput(summaryTotalAmount);
-    }
-    
+    const textLen = displayStr.length; if (textLen > 8) { perPersonAmountDisplay.style.fontSize = '2.8rem'; } else if (textLen > 6) { perPersonAmountDisplay.style.fontSize = '3.5rem'; } else { perPersonAmountDisplay.style.fontSize = '4.5rem'; }
     currentGrandTotal > 0 ? resultOrb.classList.remove('inactive') : resultOrb.classList.add('inactive');
 }
 
-manualSubtotalInput.addEventListener('input', function() { autoResizeInput(this); calculateAndRender(); });
-manualTaxInput.addEventListener('input', function() { autoResizeInput(this); calculateAndRender(); });
+manualSubtotalInput.addEventListener('input', function() { exactTipAmount = null; autoResizeInput(this); calculateAndRender(); }); manualTaxInput.addEventListener('input', function() { autoResizeInput(this); calculateAndRender(); });
 
 function setupCircularDial(wrapperId, ringId, thumbId, displayId, min, max, step, initialValue, isPercent, onChangeCallback) {
-    const wrapper = document.getElementById(wrapperId);
-    const ring = document.getElementById(ringId);
-    const thumb = document.getElementById(thumbId);
-    const display = document.getElementById(displayId);
-
-    let currentValue = initialValue;
-    const r = 38; 
-    const cx = 50;
-    const cy = 50;
-    const circumference = 2 * Math.PI * r;
-    const arcDegrees = 270;
-    const arcLength = circumference * (arcDegrees / 360);
-    ring.style.strokeDasharray = `${arcLength} ${circumference}`;
-
-    function updateUI(val) {
-        const percentage = (val - min) / (max - min);
-        const offset = arcLength - (percentage * arcLength);
-        ring.style.strokeDashoffset = offset;
-        const svgAngleRad = (percentage * arcDegrees) * (Math.PI / 180);
-        thumb.setAttribute('cx', cx + r * Math.cos(svgAngleRad));
-        thumb.setAttribute('cy', cy + r * Math.sin(svgAngleRad));
-        display.textContent = val + (isPercent ? '%' : '');
-        onChangeCallback(val);
-    }
-
-    let isDragging = false;
-
-    function handlePointer(e) {
-        if (!isDragging && e.type !== 'pointerdown' && e.type !== 'touchstart') return;
-        e.preventDefault(); 
-        const rect = wrapper.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-        if(clientX === undefined || clientY === undefined) return;
-        const dx = clientX - centerX;
-        const dy = clientY - centerY;
-        let angle = Math.atan2(dy, dx) * (180 / Math.PI); 
-        if (angle < 0) angle += 360; 
-
-        let percentage;
-        if (angle > 45 && angle < 135) {
-            if (angle < 90) { percentage = 1; } else { percentage = 0; }
-        } else {
-            let adjustedAngle = angle;
-            if (angle <= 45) adjustedAngle += 360; 
-            percentage = (adjustedAngle - 135) / arcDegrees;
-        }
-
-        percentage = Math.max(0, Math.min(1, percentage));
-        let val = min + percentage * (max - min);
-        val = Math.round(val / step) * step;
-        val = Math.max(min, Math.min(max, val));
-
-        if (val !== currentValue) {
-            currentValue = val;
-            updateUI(currentValue);
-        }
-    }
-
-    wrapper.addEventListener('pointerdown', (e) => { isDragging = true; handlePointer(e); wrapper.setPointerCapture(e.pointerId); });
-    wrapper.addEventListener('pointermove', handlePointer);
-    wrapper.addEventListener('pointerup', (e) => { isDragging = false; wrapper.releasePointerCapture(e.pointerId); });
-    wrapper.addEventListener('pointercancel', () => { isDragging = false; });
-    wrapper.addEventListener('touchstart', (e) => { isDragging = true; handlePointer(e); }, {passive: false});
-    wrapper.addEventListener('touchmove', handlePointer, {passive: false});
-    wrapper.addEventListener('touchend', () => { isDragging = false; });
-
-    updateUI(currentValue);
-    return { setValue: (val) => { currentValue = val; updateUI(val); } };
+    const wrapper = document.getElementById(wrapperId); const ring = document.getElementById(ringId); const thumb = document.getElementById(thumbId); const display = document.getElementById(displayId);
+    let currentValue = initialValue; const r = 38; const cx = 50; const cy = 50; const circumference = 2 * Math.PI * r; const arcDegrees = 270; const arcLength = circumference * (arcDegrees / 360); ring.style.strokeDasharray = `${arcLength} ${circumference}`;
+    function updateUI(val) { const percentage = (val - min) / (max - min); const offset = arcLength - (percentage * arcLength); ring.style.strokeDashoffset = offset; const svgAngleRad = (percentage * arcDegrees) * (Math.PI / 180); thumb.setAttribute('cx', cx + r * Math.cos(svgAngleRad)); thumb.setAttribute('cy', cy + r * Math.sin(svgAngleRad)); display.textContent = val + (isPercent ? '%' : ''); onChangeCallback(val); }
+    let isDragging = false; function handlePointer(e) { if (!isDragging && e.type !== 'pointerdown' && e.type !== 'touchstart') return; e.preventDefault(); const rect = wrapper.getBoundingClientRect(); const centerX = rect.left + rect.width / 2; const centerY = rect.top + rect.height / 2; const clientX = e.clientX || (e.touches && e.touches[0].clientX); const clientY = e.clientY || (e.touches && e.touches[0].clientY); if(clientX === undefined || clientY === undefined) return; const dx = clientX - centerX; const dy = clientY - centerY; let angle = Math.atan2(dy, dx) * (180 / Math.PI); if (angle < 0) angle += 360; let adjustedAngle = angle; if (angle < 135) adjustedAngle += 360; let percentage = (adjustedAngle - 135) / arcDegrees; if (percentage < 0) { if (adjustedAngle < 135) percentage = 0; } if (percentage > 1) { if (adjustedAngle > 135 + arcDegrees) percentage = 1; } percentage = Math.max(0, Math.min(1, percentage)); let val = min + percentage * (max - min); val = Math.round(val / step) * step; val = Math.max(min, Math.min(max, val)); if (val !== currentValue) { currentValue = val; updateUI(currentValue); } }
+    wrapper.addEventListener('pointerdown', (e) => { isDragging = true; handlePointer(e); wrapper.setPointerCapture(e.pointerId); }); wrapper.addEventListener('pointermove', handlePointer); wrapper.addEventListener('pointerup', (e) => { isDragging = false; wrapper.releasePointerCapture(e.pointerId); }); wrapper.addEventListener('pointercancel', () => { isDragging = false; }); wrapper.addEventListener('touchstart', (e) => { isDragging = true; handlePointer(e); }, {passive: false}); wrapper.addEventListener('touchmove', handlePointer, {passive: false}); wrapper.addEventListener('touchend', () => { isDragging = false; }); updateUI(currentValue); return { setValue: (val) => { currentValue = val; updateUI(val); } };
 }
-
-const tipDialControl = setupCircularDial('tip-wrapper', 'tip-ring', 'tip-thumb', 'tip-display', 0, 30, 5, 0, true, (val) => { globalTipValue = val; calculateAndRender(); });
+const tipDialControl = setupCircularDial('tip-wrapper', 'tip-ring', 'tip-thumb', 'tip-display', 0, 30, 5, 0, true, (val) => { 
+    if (!isSystemUpdatingDial) exactTipAmount = null; // User manual override clears exact tip
+    globalTipValue = val; calculateAndRender(); 
+}); 
 const splitDialControl = setupCircularDial('split-wrapper', 'split-ring', 'split-thumb', 'split-display', 1, 20, 1, 1, false, (val) => { globalSplitValue = val; calculateAndRender(); });
 
-settingsNameInput.value = localStorage.getItem('billapp_user_name') || '';
-settingsVenmoInput.value = localStorage.getItem('billapp_venmo_id') || '';
-settingsZelleInput.value = localStorage.getItem('billapp_zelle_id') || '';
-if(settingsWechatInput) settingsWechatInput.value = localStorage.getItem('billapp_wechat_id') || '';
-if(settingsPaypalInput) settingsPaypalInput.value = localStorage.getItem('billapp_paypal_id') || '';
-
-btnSettings.addEventListener('click', (e) => {
-    e.preventDefault();
-    settingsNameInput.value = localStorage.getItem('billapp_user_name') || '';
-    settingsVenmoInput.value = localStorage.getItem('billapp_venmo_id') || '';
-    settingsZelleInput.value = localStorage.getItem('billapp_zelle_id') || '';
-    if(settingsWechatInput) settingsWechatInput.value = localStorage.getItem('billapp_wechat_id') || '';
-    if(settingsPaypalInput) settingsPaypalInput.value = localStorage.getItem('billapp_paypal_id') || '';
-    settingsModal.classList.remove('hidden');
-});
-btnSettingsCancel.addEventListener('click', (e) => { e.preventDefault(); settingsModal.classList.add('hidden'); });
-
-btnSettingsSave.addEventListener('click', (e) => {
-    e.preventDefault();
-    localStorage.setItem('billapp_user_name', settingsNameInput.value.trim());
-    localStorage.setItem('billapp_venmo_id', settingsVenmoInput.value.trim());
-    localStorage.setItem('billapp_zelle_id', settingsZelleInput.value.trim());
-    if(settingsWechatInput) localStorage.setItem('billapp_wechat_id', settingsWechatInput.value.trim());
-    if(settingsPaypalInput) localStorage.setItem('billapp_paypal_id', settingsPaypalInput.value.trim());
-    
-    settingsModal.classList.add('hidden');
-    showNoticeModal('Profile Saved', ''); 
-});
-
-function triggerInfoModal(e) {
-    if(e) e.preventDefault();
-    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-    debugEnv.textContent = isStandalone ? "📱 PWA Standalone (App)" : "🌐 Standard Browser";
-    infoModal.classList.remove('hidden');
-}
-
-if (btnInfo && infoModal && btnInfoClose) {
-    btnInfo.addEventListener('click', triggerInfoModal);
-    btnInfo.addEventListener('touchstart', triggerInfoModal, {passive: false});
-
-    const closeInfoModal = (e) => {
-        if(e) e.preventDefault();
-        infoModal.classList.add('hidden');
-    };
-    btnInfoClose.addEventListener('click', closeInfoModal);
-    btnInfoClose.addEventListener('touchstart', closeInfoModal, {passive: false});
-}
-
-btnSnap.addEventListener('click', () => cameraInput.click());
-btnCropCancel.addEventListener('click', () => { cropModal.classList.add('hidden'); if (cropper) cropper.destroy(); cameraInput.value = ''; });
-
-cameraInput.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        cropImage.src = e.target.result;
-        cropModal.classList.remove('hidden');
-        if (cropper) cropper.destroy();
-        cropper = new Cropper(cropImage, {
-            viewMode: 1, dragMode: 'crop', autoCropArea: 0.8, restore: false,
-            guides: true, center: true, highlight: false, cropBoxMovable: true,
-            cropBoxResizable: true, toggleDragModeOnDblclick: false,
-        });
-    };
-    reader.readAsDataURL(file);
-});
+const settingsModal = document.getElementById('settings-modal');
+document.getElementById('btn-settings').addEventListener('click', () => { settingsModal.classList.remove('hidden'); }); document.getElementById('btn-settings-cancel').addEventListener('click', () => settingsModal.classList.add('hidden')); document.getElementById('btn-settings-save').addEventListener('click', () => { settingsModal.classList.add('hidden'); });
+if (document.getElementById('btn-info')) { document.getElementById('btn-info').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('info-modal').classList.remove('hidden'); }); document.getElementById('btn-info-close').addEventListener('click', () => document.getElementById('info-modal').classList.add('hidden')); }
 
 const originalApertureSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>`;
+btnSnap.addEventListener('click', () => cameraInput.click()); document.getElementById('btn-crop-cancel').addEventListener('click', () => { cropModal.classList.add('hidden'); if (cropper) cropper.destroy(); cameraInput.value = ''; });
+cameraInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { cropImage.src = e.target.result; cropModal.classList.remove('hidden'); if (cropper) cropper.destroy(); cropper = new Cropper(cropImage, { viewMode: 1, dragMode: 'crop', autoCropArea: 0.8, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false }); }; reader.readAsDataURL(file); });
 
-btnCropConfirm.addEventListener('click', async () => {
+document.getElementById('btn-crop-confirm').addEventListener('click', async () => {
     if (!cropper) return;
-
     cropper.getCroppedCanvas({ maxWidth: 1024, maxHeight: 1024 }).toBlob(async (blob) => {
-        cropModal.classList.add('hidden');
-        cropper.destroy();
-        lastScannedImageFile = new File([blob], 'receipt.jpg', { type: 'image/jpeg' });
-        
-        btnSnap.classList.add('scanning');
-        btnSnap.style.pointerEvents = 'none';
-
+        cropModal.classList.add('hidden'); cropper.destroy(); btnSnap.classList.add('scanning'); btnSnap.style.pointerEvents = 'none';
         try {
-            const result = await window.Tesseract.recognize(blob, 'eng');
-            let cleanText = result.data.text.replace(/(\d+)\s*[_\.,]\s*(\d+)/g, "$1.$2").replace(/\d+(?:\.\d+)?\s*%/g, "");
+            const result = await window.Tesseract.recognize(blob, 'eng+chi_tra+chi_sim'); 
+            let cleanText = result.data.text.replace(/(\d+)\s*[_\.,]\s*(\d+)/g, "$1.$2").replace(/\d+(?:\.\d+)?\s*%/g, ""); 
+            
+            // 🌟 V52: 智能擷取 Subtotal, Tax, Gratuity 同 Total
+            const subMatch = cleanText.match(/(?:sub\/?ttl|subtotal|taxable value|net)[^\n\r\d]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
+            const taxMatch = cleanText.match(/(?:surtax|\btax\b|vat)[^\n\r\d]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
+            const tipMatch = cleanText.match(/(?:gratuity|tip|tips|service charge|auto grt)[^\n\r\d]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
+            const totalMatch = cleanText.match(/(?:total due|total amount|\btotal\b)[^\n\r\d]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
 
-            const allAmounts = [...cleanText.matchAll(/\b\d{1,4}(?:,\d{3})*\.\d{2}\b/g)]
-                .map(m => parseFloat(m[0].replace(',', ''))).sort((a, b) => b - a);
+            let parsedSub = subMatch ? parseFloat(subMatch[1].replace(',', '')) : 0;
+            let parsedTax = taxMatch ? parseFloat(taxMatch[1].replace(',', '')) : 0;
+            let parsedTip = tipMatch ? parseFloat(tipMatch[1].replace(',', '')) : 0;
+            let parsedTotal = totalMatch ? parseFloat(totalMatch[1].replace(',', '')) : 0;
 
-            let finalSub = 0, finalTax = 0, finalTotal = 0;
-
-            const splitMatch = cleanText.match(/subtotal|taxable value|net|surtax|\btax\b|vat|total amount|\btotal\b/i);
-            if (splitMatch && allAmounts.length > 0) {
-                const itemAmounts = [...cleanText.substring(0, splitMatch.index).matchAll(/\b\d{1,4}(?:,\d{3})*\.\d{2}\b/g)]
-                    .map(m => parseFloat(m[0].replace(',', '')));
-                const sumSubtotal = itemAmounts.reduce((a, b) => a + b, 0);
-                const maxTotal = allAmounts[0]; 
-                const diffTax = maxTotal - sumSubtotal;
-                if (sumSubtotal > 0 && diffTax >= 0 && diffTax < sumSubtotal * 0.3) {
-                    finalSub = sumSubtotal; finalTax = diffTax; finalTotal = maxTotal;
-                }
+            // Fallbacks
+            if (parsedTotal > 0) {
+                if (parsedSub === 0 && parsedTax > 0) parsedSub = parsedTotal - parsedTax - parsedTip;
+                if (parsedSub > 0 && parsedTax === 0 && parsedTotal > (parsedSub + parsedTip)) parsedTax = parsedTotal - parsedSub - parsedTip;
+            } else if (parsedSub > 0) {
+                parsedTotal = parsedSub + parsedTax + parsedTip;
             }
 
-            if (finalSub === 0) {
-                for (let i = 0; i < allAmounts.length; i++) {
-                    for (let j = i + 1; j < allAmounts.length; j++) {
-                        for (let k = j + 1; k < allAmounts.length; k++) {
-                            let c = allAmounts[i], a = allAmounts[j], b = allAmounts[k];
-                            if (Math.abs((a + b) - c) < 0.05 && b < a * 0.3) {
-                                finalTotal = c; finalSub = a; finalTax = b; break;
-                            }
-                        }
-                        if (finalTotal) break;
-                    }
-                    if (finalTotal) break;
-                }
-            }
-
-            if (finalSub === 0) {
-                const subMatch = cleanText.match(/(?:subtotal|taxable value|net)[^\n\r]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
-                const taxMatch = cleanText.match(/(?:surtax|\btax\b|vat)[^\n\r]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
-                const totalMatch = cleanText.match(/(?:total amount|\btotal\b)[^\n\r]{0,40}?(\d{1,4}(?:,\d{3})*\.\d{2})/i);
-                let parsedSub = subMatch ? parseFloat(subMatch[1].replace(',', '')) : 0;
-                let parsedTax = taxMatch ? parseFloat(taxMatch[1].replace(',', '')) : 0;
-                let parsedTotal = totalMatch ? parseFloat(totalMatch[1].replace(',', '')) : 0;
-
-                if (parsedSub > 0 && parsedTax > 0) { finalSub = parsedSub; finalTax = parsedTax; finalTotal = parsedSub + parsedTax; }
-                else if (parsedTotal > 0 && parsedSub > 0 && parsedSub < parsedTotal) { finalTotal = parsedTotal; finalSub = parsedSub; finalTax = parsedTotal - parsedSub; }
-                else if (parsedTotal > 0 && parsedTax > 0 && parsedTax < parsedTotal * 0.3) { finalTotal = parsedTotal; finalTax = parsedTax; finalSub = parsedTotal - parsedTax; }
-                else if (parsedSub > 0) { finalSub = parsedSub; finalTax = parsedTax; }
-                else if (parsedTotal > 0) { finalTotal = parsedTotal; finalSub = parsedTotal; finalTax = 0; }
-            }
-
-            if (finalSub > 0 || finalTotal > 0) {
-                if (finalSub === 0 && finalTotal > 0) finalSub = finalTotal;
-                manualSubtotalInput.value = Math.abs(parseFloat(finalSub.toFixed(2)));
-                manualTaxInput.value = Math.abs(parseFloat(finalTax.toFixed(2)));
+            if (parsedSub > 0 || parsedTotal > 0) { 
+                if (parsedSub === 0 && parsedTotal > 0) parsedSub = parsedTotal; 
+                manualSubtotalInput.value = Math.abs(parseFloat(parsedSub.toFixed(2))); 
+                manualTaxInput.value = Math.abs(parseFloat(parsedTax.toFixed(2))); 
                 
-                autoResizeInput(manualSubtotalInput);
-                autoResizeInput(manualTaxInput);
-                calculateAndRender();
-            } else {
-                lastScannedImageFile = null;
-                showNoticeModal('No Amount Found', 'Please try cropping closer to the Subtotal and Tax.');
-            }
+                // 🌟 V52: 設定精確 Gratuity 落 Tip
+                if (parsedTip > 0) {
+                    exactTipAmount = parsedTip;
+                    isSystemUpdatingDial = true;
+                    let approxPct = Math.round((parsedTip / parsedSub) * 100);
+                    approxPct = Math.min(Math.max(approxPct, 0), 30);
+                    tipDialControl.setValue(approxPct); // Move dial visually
+                    exactTipAmount = parsedTip; // Re-lock exact amount
+                    isSystemUpdatingDial = false;
+                } else {
+                    exactTipAmount = null;
+                    isSystemUpdatingDial = true;
+                    tipDialControl.setValue(0);
+                    isSystemUpdatingDial = false;
+                }
 
-        } catch (error) {
-            showNoticeModal('Error', 'Recognition failed. Try again.');
-        } finally {
-            btnSnap.innerHTML = originalApertureSVG;
-            btnSnap.classList.remove('scanning');
-            btnSnap.style.pointerEvents = 'auto';
-            cameraInput.value = ''; 
-        }
+                autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender(); 
+            } else { 
+                showNoticeModal('No Amount Found', 'Please try cropping closer to the Subtotal and Tax.'); 
+            }
+        } catch (error) { showNoticeModal('Error', 'Recognition failed. Try again.'); } finally { btnSnap.innerHTML = originalApertureSVG; btnSnap.classList.remove('scanning'); btnSnap.style.pointerEvents = 'auto'; cameraInput.value = ''; }
     }, 'image/jpeg'); 
 });
 
-btnShare.addEventListener('click', async (e) => {
-    e.preventDefault();
-    if (currentGrandTotal === 0) {
-        showNoticeModal('Empty Bill', ''); 
-        return;
-    }
-    
-    const rawTitle = manualTitleInput.value.trim();
-    const billTitle = rawTitle ? rawTitle : 'a Meal';
-    
-    const now = new Date();
-    const dateOpts = { year: 'numeric', month: 'short', day: 'numeric' };
-    const todayStr = now.toLocaleDateString('en-US', dateOpts);
-    
-    const month = now.toLocaleString('en-US', { month: 'short' }); 
-    const day = now.getDate(); 
-    const year = now.getFullYear(); 
-    const hours = now.getHours(); 
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    const ampm = hours >= 12 ? 'pm' : 'am';
-    const noteDateStr = `${month}${day}.${year}.${hours}:${minutes}${ampm}`;
-    
-    const userName = localStorage.getItem('billapp_user_name') || 'Me';
-    const currentVenmoId = localStorage.getItem('billapp_venmo_id') || '';
-    const currentZelleId = localStorage.getItem('billapp_zelle_id') || '';
-    const currentWechatId = localStorage.getItem('billapp_wechat_id') || '';
-    const currentPaypalId = localStorage.getItem('billapp_paypal_id') || '';
-    
-    let paymentOptionsText = "";
-    if (currentVenmoId || currentZelleId || currentWechatId || currentPaypalId) {
-        paymentOptionsText += "\n👇 Payment Options 👇\n";
-        
-        if (currentVenmoId) {
-            const dynamicNote = `${noteDateStr} ${userName} Bill`;
-            const encodedNote = encodeURIComponent(dynamicNote);
-            const venmoLink = `https://venmo.com/?tx=pay&recipients=${currentVenmoId}&amount=${currentPerPerson.toFixed(2)}&note=${encodedNote}`;
-            paymentOptionsText += `\n🔵 Venmo Auto-Pay:\n${venmoLink}\n`;
-        }
-        
-        if (currentPaypalId) {
-            const paypalLink = `https://paypal.me/${currentPaypalId}/${currentPerPerson.toFixed(2)}`;
-            paymentOptionsText += `\n🟡 PayPal:\n${paypalLink}\n`;
-        }
-
-        if (currentZelleId) {
-            paymentOptionsText += `\n🟣 Zelle (Copy to transfer):\n${currentZelleId}\n(Amount: $${currentPerPerson.toFixed(2)})\n`;
-        }
-        
-        if (currentWechatId) {
-            paymentOptionsText += `\n🟢 WeChat Pay (Copy ID):\n${currentWechatId}\n(Amount: $${currentPerPerson.toFixed(2)})\n`;
-        }
-    }
-
-    const shareTitle = `${userName}'s Bill`;
-    
-    const shareText = 
-`🍽️ ${userName} shared a bill for ${billTitle}\n📅 Date: ${todayStr}\n\n🔹 Subtotal: $${scannedSubtotal.toFixed(2)}\n🔹 Tax: $${scannedTax.toFixed(2)}\n🔹 Tip (${globalTipValue}%): $${(scannedSubtotal * (globalTipValue / 100)).toFixed(2)}\n💰 Total: $${currentGrandTotal.toFixed(2)}\n\n👥 Split: ${globalSplitValue} ppl\n👉 Per Person: $${currentPerPerson.toFixed(2)}\n${paymentOptionsText}`;
-
-    const shareData = { title: shareTitle, text: shareText };
-    if (lastScannedImageFile && navigator.canShare && navigator.canShare({ files: [lastScannedImageFile] })) {
-        shareData.files = [lastScannedImageFile];
-    }
-
-    if (navigator.share) {
-        try { await navigator.share(shareData); } catch (e) {}
-    } else {
-        navigator.clipboard.writeText(shareText).then(() => {
-            showNoticeModal('Copied', 'Details copied to clipboard.');
-        });
-    }
+btnNext.addEventListener('click', () => { 
+    manualSubtotalInput.value = ''; manualTaxInput.value = ''; exactTipAmount = null;
+    autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); 
+    isSystemUpdatingDial = true; tipDialControl.setValue(0); splitDialControl.setValue(1); isSystemUpdatingDial = false;
+});
+document.getElementById('btn-share').addEventListener('click', async () => {
+    if (currentGrandTotal === 0) { showNoticeModal('Empty Bill', '大佬，未入銀碼喎！'); return; }
+    const shareText = `🍽️ Bill Shared\n🔹 Subtotal: $${scannedSubtotal.toFixed(2)}\n🔹 Tax: $${scannedTax.toFixed(2)}\n🔹 Tip/Gratuity: $${exactTipAmount ? exactTipAmount.toFixed(2) : (scannedSubtotal * (globalTipValue / 100)).toFixed(2)}\n💰 Total: $${currentGrandTotal.toFixed(2)}\n\n👥 Split: ${globalSplitValue} ppl\n👉 Per Person: $${currentPerPerson.toFixed(2)}`;
+    if (navigator.share) { try { await navigator.share({ title: `Bill Summary`, text: shareText }); } catch (e) {} } else { navigator.clipboard.writeText(shareText).then(() => { showNoticeModal('Copied', 'Details copied to clipboard.'); }); }
 });
 
-btnDone.addEventListener('click', (e) => { 
-    e.preventDefault(); 
-    document.activeElement.blur(); 
-    
-    manualSubtotalInput.value = '';
-    manualTaxInput.value = '';
-    manualTitleInput.value = ''; 
-    
-    autoResizeInput(manualSubtotalInput);
-    autoResizeInput(manualTaxInput);
-    
-    lastScannedImageFile = null; 
-    tipDialControl.setValue(0); 
-    splitDialControl.setValue(1);
-});
-
-document.addEventListener('focusout', (e) => {
-    if (e.target.tagName === 'INPUT') {
-        setTimeout(() => {
-            window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-        }, 50);
-    }
-});
-
-autoResizeInput(manualSubtotalInput);
-autoResizeInput(manualTaxInput);
-calculateAndRender();
+autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender();
