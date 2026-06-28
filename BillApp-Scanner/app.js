@@ -1,5 +1,5 @@
 // ==========================================
-// 🌟 V100: Gemini AI Vision Engine (Standalone Scanner)
+// 🌟 V100.1: Gemini AI Vision Engine (Syntax Fix)
 // ==========================================
 const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-done'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image');
 let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 5; let globalSplitValue = 1;
@@ -13,7 +13,7 @@ function autoResizeInput(el) { el.style.width = '0px'; el.style.width = Math.max
 // 🤖 核心 AI 視覺解析引擎 (Gemini)
 async function analyzeImageWithGemini(base64Image) {
     // ⚠️ 記得喺度填返你自己嘅 Gemini API Key
-    const apiKey = 'AQ.Ab8RN6LpoRYCiKZgsCg0UlYUJviXGQSDJuXEra7EkOu0HTn0UQ'; 
+    const apiKey = 'Ab8RN6LpoRYCiKZgsCg0UlYUJviXGQSDJuXEra7EkOu0HTn0UQ'; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     // 剷走 'data:image/jpeg;base64,' 前綴
@@ -98,7 +98,12 @@ const tipDialControl = setupCircularDial('tip-wrapper', 'tip-ring', 'tip-thumb',
 const splitDialControl = setupCircularDial('split-wrapper', 'split-ring', 'split-thumb', 'split-display', 1, 20, 1, 1, false, (val) => { globalSplitValue = val; calculateAndRender(); });
 
 const settingsModal = document.getElementById('settings-modal');
-document.getElementById('btn-settings').addEventListener('click', () => { settingsModal.classList.remove('hidden'); }); document.getElementById('btn-settings-cancel').addEventListener('click', () => settingsModal.classList.add('hidden'); }); document.getElementById('btn-settings-save').addEventListener('click', () => { settingsModal.classList.add('hidden'); });
+document.getElementById('btn-settings').addEventListener('click', () => { settingsModal.classList.remove('hidden'); }); 
+
+// 🌟 BUG 已修復：補回左邊嘅大括號 { 
+document.getElementById('btn-settings-cancel').addEventListener('click', () => { settingsModal.classList.add('hidden'); }); 
+document.getElementById('btn-settings-save').addEventListener('click', () => { settingsModal.classList.add('hidden'); });
+
 if (document.getElementById('btn-info')) { document.getElementById('btn-info').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('info-modal').classList.remove('hidden'); }); document.getElementById('btn-info-close').addEventListener('click', () => document.getElementById('info-modal').classList.add('hidden')); }
 
 const originalApertureSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>`;
