@@ -1,5 +1,29 @@
 // ==========================================
-// 🌟 V100.1: Gemini AI Vision Engine (Syntax Fix)
+// 🌟 V100.2: Gemini AI Vision Engine + Firebase Cloud Sync
+// ==========================================
+
+// 1️⃣ 引入 Firebase 官方最新版 CDN 模組 SDK
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// 2️⃣ 填入你的真實 Firebase 金鑰
+const firebaseConfig = {
+  apiKey: "AIzaSyBkS7L59BzlNCfpYM2_pWkNQcOodVcdORc",
+  authDomain: "gen-lang-client-0370049065.firebaseapp.com",
+  projectId: "gen-lang-client-0370049065",
+  storageBucket: "gen-lang-client-0370049065.firebasestorage.app",
+  messagingSenderId: "315301750535",
+  appId: "1:315301750535:web:000fced25beebb8bfb47a2"
+};
+
+// 初始化 Firebase 宇宙
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ==========================================
+// 🌟 原有 Scanner UI 與 DOM 變數定義
 // ==========================================
 const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-done'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image');
 let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 5; let globalSplitValue = 1;
@@ -10,39 +34,21 @@ let isSystemUpdatingDial = false;
 function showNoticeModal(title, msg) { const modal = document.getElementById('custom-modal'); document.getElementById('modal-title').textContent = title; document.getElementById('modal-content').innerHTML = msg; modal.classList.remove('hidden'); document.getElementById('modal-close-btn').onclick = () => modal.classList.add('hidden'); }
 function autoResizeInput(el) { el.style.width = '0px'; el.style.width = Math.max(45, el.scrollWidth + 5) + 'px'; }
 
-// 🤖 核心 AI 視覺解析引擎 (Gemini)
-// 🤖 核心 AI 視覺解析引擎 (Gemini) - Debug 版
-// 🤖 核心 AI 視覺解析引擎 (Gemini) - Header 傳送終極穩陣版
-// 🤖 核心 AI 視覺解析引擎 (Gemini) - 破解 401 Bug 版
-// 🤖 核心 AI 視覺解析引擎 (Gemini) - 終極標準版
-// 🤖 核心 AI 視覺解析引擎 (Gemini) - 最新 Model 升級版
 // 🤖 核心 AI 視覺解析引擎 - 呼叫自家 Google Cloud 後端
 async function analyzeImageWithGemini(base64Image) {
-    // 🌟 貼上你啱啱複製返嚟嗰條專屬 URL！
     const url = 'https://analyze-receipt-315301750535.us-west1.run.app';
-
-    // 格式化 Base64 數據，只要逗號後面嘅純 Data 內容
     const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
-    // 直接發送 POST 請求畀你嘅後端，唔需要再帶任何 Headers 限制同 API Keys！
     const response = await fetch(url, {
         method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json' 
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ base64Image: base64Data })
     });
 
     const data = await response.json();
-    
-    if (!response.ok) {
-        throw new Error(data.error || 'Backend Serverless API Failed');
-    }
-    
-    // 後端已經將 JSON 解析好，直接 return 畀前端渲染畫面的數據結構就得
+    if (!response.ok) throw new Error(data.error || 'Backend Serverless API Failed');
     return data; 
 }
-
 
 function calculateAndRender() {
     const sub = parseFloat(manualSubtotalInput.value) || 0; const tax = parseFloat(manualTaxInput.value) || 0; scannedSubtotal = sub; scannedTax = tax;
@@ -52,7 +58,6 @@ function calculateAndRender() {
     const tipDisplay = document.getElementById('tip-display');
     const summaryTipLabel = document.getElementById('summary-tip-label');
 
-    // Auto-Gratuity UI Lock
     if (exactTipAmount !== null && exactTipAmount > 0) {
         tipAmount = exactTipAmount;
         if (summaryTipLabel) summaryTipLabel.textContent = `Tip (Incl.)`;
@@ -97,8 +102,6 @@ const splitDialControl = setupCircularDial('split-wrapper', 'split-ring', 'split
 
 const settingsModal = document.getElementById('settings-modal');
 document.getElementById('btn-settings').addEventListener('click', () => { settingsModal.classList.remove('hidden'); }); 
-
-// 🌟 BUG 已修復：補回左邊嘅大括號 { 
 document.getElementById('btn-settings-cancel').addEventListener('click', () => { settingsModal.classList.add('hidden'); }); 
 document.getElementById('btn-settings-save').addEventListener('click', () => { settingsModal.classList.add('hidden'); });
 
@@ -110,63 +113,34 @@ cameraInput.addEventListener('change', (event) => { const file = event.target.fi
 
 document.getElementById('btn-crop-confirm').addEventListener('click', async () => {
     if (!cropper) return;
-    
-    // 將 Crop 完嘅圖轉做 Base64 格式
     const base64Image = cropper.getCroppedCanvas({ maxWidth: 1024, maxHeight: 1024 }).toDataURL('image/jpeg', 0.8);
-    
     cropModal.classList.add('hidden'); cropper.destroy(); 
     btnSnap.classList.add('scanning'); btnSnap.style.pointerEvents = 'none';
 
     try {
-        // 🚀 將張相掟畀 Gemini AI！
         const aiResult = await analyzeImageWithGemini(base64Image);
+        let parsedSub = aiResult.subtotal || 0; let parsedTax = aiResult.tax || 0; let parsedTip = aiResult.gratuity || 0; let parsedTotal = aiResult.total || 0;
 
-        let parsedSub = aiResult.subtotal || 0;
-        let parsedTax = aiResult.tax || 0;
-        let parsedTip = aiResult.gratuity || 0;
-        let parsedTotal = aiResult.total || 0;
-
-        // 將乾淨嘅數字直接隊入 UI
         if (parsedSub > 0 || parsedTotal > 0) { 
             if (parsedSub === 0 && parsedTotal > 0) parsedSub = parsedTotal; 
             manualSubtotalInput.value = Math.abs(parseFloat(parsedSub.toFixed(2))); 
             manualTaxInput.value = Math.abs(parseFloat(parsedTax.toFixed(2))); 
             
-            // 處理 Auto-Gratuity 鎖定
             if (parsedTip > 0) {
-                exactTipAmount = parsedTip;
-                isSystemUpdatingDial = true;
-                tipDialControl.setValue(0); // UI 顯示 INCL
-                exactTipAmount = parsedTip; 
-                isSystemUpdatingDial = false;
+                exactTipAmount = parsedTip; isSystemUpdatingDial = true; tipDialControl.setValue(0); exactTipAmount = parsedTip; isSystemUpdatingDial = false;
             } else {
-                exactTipAmount = null;
-                isSystemUpdatingDial = true;
-                tipDialControl.setValue(5); // 預設 5% Tip
-                isSystemUpdatingDial = false;
+                exactTipAmount = null; isSystemUpdatingDial = true; tipDialControl.setValue(5); isSystemUpdatingDial = false;
             }
-
             autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender(); 
         } else { 
             showNoticeModal('No Amount Found', 'AI 搵唔到銀碼，請影得清楚啲！'); 
         }
     } catch (error) { 
-            // 🌟 DEBUG 重點：將真正嘅 Error Message 印落 UI 同 Console
             console.error("🔥 AI 終極 Debug Log:", error);
-            
-            // 彈出包含詳細錯誤嘅 Modal，用紅色細字顯示
-            showNoticeModal(
-                'API 診斷錯誤', 
-                `<div style="font-size: 0.85rem; word-break: break-all; color: #ff4444; text-align: left; line-height: 1.4; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px;">
-                    ${error.message}
-                </div>`
-            ); 
-        } finally { 
-            btnSnap.innerHTML = originalApertureSVG; 
-            btnSnap.classList.remove('scanning'); 
-            btnSnap.style.pointerEvents = 'auto'; 
-            cameraInput.value = ''; 
-        }
+            showNoticeModal('API 診斷錯誤', `<div style="font-size: 0.85rem; word-break: break-all; color: #ff4444; text-align: left; line-height: 1.4; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px;">${error.message}</div>`); 
+    } finally { 
+            btnSnap.innerHTML = originalApertureSVG; btnSnap.classList.remove('scanning'); btnSnap.style.pointerEvents = 'auto'; cameraInput.value = ''; 
+    }
 });
 
 btnNext.addEventListener('click', () => { 
@@ -182,3 +156,81 @@ document.getElementById('btn-share').addEventListener('click', async () => {
 });
 
 autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender();
+
+// ==========================================
+// 🌟 Firebase Auth & Firestore 儲存邏輯
+// ==========================================
+
+// 數字 PIN 登入 ＋ 全自動開戶邏輯
+window.handleLogin = async function() {
+    const username = document.getElementById('usernameInput').value.toLowerCase().trim();
+    const pin = document.getElementById('passwordInput').value;
+    
+    if(!username || !pin) return alert("Please enter username and PIN");
+
+    // 偷偷轉成虛擬 Email 格式
+    const virtualEmail = `${username}@billapp.local`;
+
+    try {
+        await signInWithEmailAndPassword(auth, virtualEmail, pin);
+        alert("Login Successful!");
+    } catch (error) {
+        // 第一次登入帳號不存在時，自動幫屋企人註冊開戶！
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+            try {
+                await createUserWithEmailAndPassword(auth, virtualEmail, pin);
+                alert(`Welcome ${username}! Your account has been auto-created.`);
+            } catch (createErr) {
+                alert("Login/Signup Error: " + createErr.message);
+            }
+        } else {
+            alert("Error: " + error.message);
+        }
+    }
+};
+
+// 監聽登入狀態：一成功登入，即刻去 Firestore 撈取個人 Profile
+onAuthStateChanged(auth, async (user) => {
+    const loginSec = document.getElementById('loginSection');
+    const profileSec = document.getElementById('profileSection');
+
+    if (user) {
+        if(loginSec) loginSec.style.display = 'none';
+        if(profileSec) profileSec.style.display = 'block';
+
+        // 雲端撈取 users/{UID} 文件
+        const docSnap = await getDoc(doc(db, "users", user.uid));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            // 自動幫填回 iPhone 畫面嘅輸入框 
+            if(document.getElementById('profileName')) document.getElementById('profileName').value = data.name || '';
+            if(document.getElementById('profileVenmo')) document.getElementById('profileVenmo').value = data.venmoId || '';
+            if(document.getElementById('profileZelle')) document.getElementById('profileZelle').value = data.zelle || '';
+            if(document.getElementById('profilePaypal')) document.getElementById('profilePaypal').value = data.paypal || '';
+        }
+    } else {
+        if(loginSec) loginSec.style.display = 'block';
+        if(profileSec) profileSec.style.display = 'none';
+    }
+});
+
+// 當點擊「Save Profile」按鈕，秒速同步上雲端鎖死
+window.saveProfile = async function() {
+    const user = auth.currentUser;
+    if (!user) return alert("Please login first.");
+
+    const profileData = {
+        name: document.getElementById('profileName').value,
+        venmoId: document.getElementById('profileVenmo').value,
+        zelle: document.getElementById('profileZelle').value,
+        paypal: document.getElementById('profilePaypal').value,
+        updatedAt: new Date().toISOString()
+    };
+
+    try {
+        await setDoc(doc(db, "users", user.uid), profileData);
+        alert("Saved to Firebase Cloud! Refresh the page to test.");
+    } catch (error) {
+        alert("Save Failed: " + error.message);
+    }
+};

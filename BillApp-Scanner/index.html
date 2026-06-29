@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <link rel="stylesheet" href="../shared/core-ui.css">
     <link rel="stylesheet" href="../shared/scanner-ui.css">
-    <link rel="stylesheet" href="style.css?v=50.0">
+    <link rel="stylesheet" href="style.css?v=51.0">
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
@@ -54,7 +54,6 @@
                 <div class="action-wrapper"><button class="action-circle-btn done-btn" id="btn-done"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><polyline points="20 6 9 17 4 12"></polyline></svg></button></div>
             </div>
             
-            <!-- 🌟 淨係加呢一段仔落去你原本嘅 Code 度 -->
             <div style="text-align: center; font-size: 0.75rem; color: rgba(255, 255, 255, 0.3); margin-top: 15px; margin-bottom: 10px; letter-spacing: 0.5px; width: 100%; font-family: sans-serif;">
                 Powered by Gemini AI ✨
             </div>
@@ -62,8 +61,59 @@
         </div>
     </div>
 
-    <div id="info-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3><div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;"><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">V50.0 (Shared UI)</span></div><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span></div></div><div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div></div></div>
-    <div id="settings-modal" class="modal-overlay hidden"><div class="glass-modal-card" style="max-height: 90vh; overflow-y: auto;"><h3 class="modal-title" style="margin-bottom: 25px;">Setup Profile</h3><div class="modal-content" style="gap: 15px; display: flex; flex-direction: column; width: 100%;"><div class="modal-input-glass"><label>Name</label><input type="text" id="settings-name-input" placeholder="Name"></div><div class="modal-input-glass"><label>Venmo ID</label><input type="text" id="settings-venmo-input" placeholder="Without @"></div><div class="modal-input-glass"><label>Zelle</label><input type="text" id="settings-zelle-input" placeholder="Phone/Email"></div><div class="modal-input-glass"><label>WeChat</label><input type="text" id="settings-wechat-input" placeholder="WeChat ID"></div><div class="modal-input-glass"><label>PayPal</label><input type="text" id="settings-paypal-input" placeholder="Username"></div></div><div style="display: flex; gap: 10px; width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-settings-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-settings-save">Save Profile</button></div></div></div>
+    <div id="info-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3><div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;"><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">V51.0 (Cloud Sync)</span></div><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Detecting...</span></div></div><div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div></div></div>
+    
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="glass-modal-card" style="max-height: 90vh; overflow-y: auto;">
+            <h3 class="modal-title" style="margin-bottom: 25px;">Setup Profile</h3>
+            
+            <div class="modal-content" style="gap: 15px; display: flex; flex-direction: column; width: 100%;">
+                
+                <div id="loginSection" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+                    <div style="font-size: 0.85rem; color: var(--text-dim, #888); text-align: center;">Login to sync your profile to cloud</div>
+                    
+                    <div class="modal-input-glass">
+                        <label>Username</label>
+                        <input type="text" id="usernameInput" placeholder="e.g. dennis">
+                    </div>
+                    <div class="modal-input-glass">
+                        <label>PIN Code</label>
+                        <input type="password" id="passwordInput" placeholder="4-6 Digit PIN" inputmode="numeric" pattern="[0-9]*">
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
+                        <button class="modal-close-btn" onclick="document.getElementById('settings-modal').classList.add('hidden')" style="background: #21242D; color: #fff;">Cancel</button>
+                        <button class="modal-close-btn" onclick="handleLogin()">Login</button>
+                    </div>
+                </div>
+
+                <div id="profileSection" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
+                    <div class="modal-input-glass">
+                        <label>Name</label>
+                        <input type="text" id="profileName" placeholder="Name">
+                    </div>
+                    <div class="modal-input-glass">
+                        <label>Venmo ID</label>
+                        <input type="text" id="profileVenmo" placeholder="Without @">
+                    </div>
+                    <div class="modal-input-glass">
+                        <label>Zelle</label>
+                        <input type="text" id="profileZelle" placeholder="Phone/Email">
+                    </div>
+                    <div class="modal-input-glass">
+                        <label>PayPal</label>
+                        <input type="text" id="profilePaypal" placeholder="Username">
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
+                        <button class="modal-close-btn" id="btn-settings-cancel" style="background: #21242D; color: #fff;">Cancel</button>
+                        <button class="modal-close-btn" id="btn-settings-save" onclick="saveProfile()">Save Profile</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
     
     <div id="crop-modal" class="modal-overlay hidden">
         <div class="crop-hint">Crop to include items, Subtotal, Tax & Total</div>
@@ -75,6 +125,7 @@
     </div>
     
     <div id="custom-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" id="modal-title">Notice</h3><div class="modal-content" id="modal-content"></div><button class="modal-close-btn" id="modal-close-btn">OK</button></div></div>
-    <script type="module" src="app.js?v=50.0"></script>
+    
+    <script type="module" src="app.js?v=51.0"></script>
 </body>
 </html>
