@@ -18,7 +18,7 @@ function autoResizeInput(el) { el.style.width = '0px'; el.style.width = Math.max
 // 🤖 核心 AI 視覺解析引擎 (Gemini) - 最新 Model 升級版
 async function analyzeImageWithGemini(base64Image) {
     // 👇 繼續用你條 AQ. 開頭嘅 Key，佢係 Work 嘅！
-    const apiKey = 'AQ.Ab8RN6JjOZLd2pImu-eEmb_hQRgX7y1yZDvhEcUpgFGq60kJfQ'; 
+    const apiKey = 'AQ.Ab8RN6IA945LnYO1JK9IM6sUCuuUUxKPqLeLbvOA4YorrxeMnQ'; 
     
     // 🌟 將 3.5 換做 2.5 避開大塞車
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
