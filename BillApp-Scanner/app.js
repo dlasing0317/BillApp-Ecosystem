@@ -16,53 +16,33 @@ function autoResizeInput(el) { el.style.width = '0px'; el.style.width = Math.max
 // 🤖 核心 AI 視覺解析引擎 (Gemini) - 破解 401 Bug 版
 // 🤖 核心 AI 視覺解析引擎 (Gemini) - 終極標準版
 // 🤖 核心 AI 視覺解析引擎 (Gemini) - 最新 Model 升級版
+// 🤖 核心 AI 視覺解析引擎 - 呼叫自家 Google Cloud 後端
 async function analyzeImageWithGemini(base64Image) {
-    // 👇 繼續用你條 AQ. 開頭嘅 Key，佢係 Work 嘅！
-    const apiKey = 'AQ.Ab8RN6JmCU2M9nXcTvrHi-0CzULE4JwVDCBg6-nUxXHwhHhplQ'; 
-    
-    // 🌟 將 3.5 換做 2.5 避開大塞車
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    // 🌟 貼上你啱啱複製返嚟嗰條專屬 URL！
+    const url = 'https://analyze-receipt-315301750535.us-west1.run.app';
 
-    const base64Data = base64Image.split(',')[1];
-    const prompt = `
-    You are an expert accountant. Analyze this receipt image and extract the subtotal, tax, gratuity/tip, and final total.
-    If gratuity, service charge, or auto-gratuity is included, put it in the "gratuity" field.
-    Return strictly a JSON object with no markdown formatting.
-    Use this exact JSON schema:
-    {
-      "subtotal": 0.00,
-      "tax": 0.00,
-      "gratuity": 0.00,
-      "total": 0.00
-    }
-    `;
+    // 格式化 Base64 數據，只要逗號後面嘅純 Data 內容
+    const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
+    // 直接發送 POST 請求畀你嘅後端，唔需要再帶任何 Headers 限制同 API Keys！
     const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ parts: [ { text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64Data } } ] }],
-            generationConfig: { response_mime_type: "application/json" } 
-        })
+        headers: { 
+            'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ base64Image: base64Data })
     });
 
     const data = await response.json();
-
+    
     if (!response.ok) {
-        const errorMsg = data.error ? data.error.message : JSON.stringify(data);
-        throw new Error(`API HTTP ${response.status}: ${errorMsg}`);
+        throw new Error(data.error || 'Backend Serverless API Failed');
     }
-
-    if (!data.candidates || data.candidates.length === 0) {
-        throw new Error(`No Candidates returned. Data: ${JSON.stringify(data)}`);
-    }
-
-    try {
-        return JSON.parse(data.candidates[0].content.parts[0].text);
-    } catch (e) {
-        throw new Error(`JSON Parse Error. AI Output: ${data.candidates[0].content.parts[0].text}`);
-    }
+    
+    // 後端已經將 JSON 解析好，直接 return 畀前端渲染畫面的數據結構就得
+    return data; 
 }
+
 
 function calculateAndRender() {
     const sub = parseFloat(manualSubtotalInput.value) || 0; const tax = parseFloat(manualTaxInput.value) || 0; scannedSubtotal = sub; scannedTax = tax;
