@@ -49,7 +49,8 @@ function showNoticeModal(title, msg) {
 
 function autoResizeInput(el) { 
     el.style.width = '0px'; 
-    el.style.width = Math.max(45, el.scrollWidth + 5) + 'px'; 
+    // 加大 buffer 去 20px，防止 iPhone Safari 食字
+    el.style.width = Math.max(50, el.scrollWidth + 20) + 'px'; 
 }
 
 // ==========================================
@@ -229,8 +230,71 @@ btnNext.addEventListener('click', () => {
 
 document.getElementById('btn-share').addEventListener('click', async () => {
     if (currentGrandTotal === 0) { showNoticeModal('Empty Bill', '大佬，未入銀碼喎！'); return; }
-    const shareText = `🍽️ Bill Shared\n🔹 Subtotal: $${scannedSubtotal.toFixed(2)}\n🔹 Tax: $${scannedTax.toFixed(2)}\n🔹 Tip/Gratuity: $${exactTipAmount ? exactTipAmount.toFixed(2) : (scannedSubtotal * (globalTipValue / 100)).toFixed(2)}\n💰 Total: $${currentGrandTotal.toFixed(2)}\n\n👥 Split: ${globalSplitValue} ppl\n👉 Per Person: $${currentPerPerson.toFixed(2)}`;
-    if (navigator.share) { try { await navigator.share({ title: `Bill Summary`, text: shareText }); } catch (e) {} } else { navigator.clipboard.writeText(shareText).then(() => { showNoticeModal('Copied', 'Details copied to clipboard.'); }); }
+    
+    // 1. 抓取你填嘅 Bill Name 同你個名
+    const billNameInput = document.getElementById('manual-title').value.trim();
+    const billName = billNameInput || "聚餐";
+    const encodedBillName = encodeURIComponent(billName + " Bill"); // 轉換為網址安全格式，畀 Venmo Note 用
+    const myName = document.getElementById('profileName')?.value.trim() || "我";
+
+    // 2. 抓取 Profile 裡面嘅收款戶口
+    const venmo = document.getElementById('profileVenmo')?.value.trim();
+    const zelle = document.getElementById('profileZelle')?.value.trim();
+    const paypal = document.getElementById('profilePaypal')?.value.trim();
+
+    const perPersonStr = currentPerPerson.toFixed(2);
+    
+    // 3. 組合完美中文 WhatsApp 格式
+    let shareText = `🍽️ ${myName} 送來了${billName}帳單明細\n\n`;
+    shareText += `🔷 稅前 (Subtotal): $${scannedSubtotal.toFixed(2)}\n`;
+    shareText += `🔷 稅金 (Tax): $${scannedTax.toFixed(2)}\n`;
+    
+    // 判斷 Tip 係包含咗定係百分比
+    if (exactTipAmount !== null && exactTipAmount > 0) {
+        shareText += `🔷 貼士 (Tip Incl.): $${exactTipAmount.toFixed(2)}\n`;
+    } else {
+        shareText += `🔷 貼士 (Tip ${globalTipValue}%): $${(scannedSubtotal * (globalTipValue / 100)).toFixed(2)}\n`;
+    }
+    
+    shareText += `💰 總金額 (Total): $${currentGrandTotal.toFixed(2)}\n\n`;
+    shareText += `👥 分攤人數: ${globalSplitValue} 人\n`;
+    shareText += `👉 每人應付: $${perPersonStr}\n\n`;
+    
+    shareText += `👇 請選擇付款方式 👇\n`;
+
+    // 4. 動態加入收款 Link (有填資料先會顯示)
+    if (venmo) {
+        shareText += `\n🔵 點擊使用 Venmo 快速付款:\n`;
+        // Venmo Deep Link: 自動帶入 ID, 銀碼, 同埋 Note
+        shareText += `https://venmo.com/?tx=pay&recipients=${venmo}&amount=${perPersonStr}&note=${encodedBillName}\n`;
+    }
+    
+    if (paypal) {
+        shareText += `\n🟡 點擊使用 PayPal 快速付款:\n`;
+        // PayPal.me Link: 自動帶入 ID 同銀碼
+        shareText += `https://paypal.me/${paypal}/${perPersonStr}\n`;
+    }
+
+    if (zelle) {
+        shareText += `\n🟣 Zelle 轉帳帳號 (請複製):\n`;
+        shareText += `${zelle}\n`;
+        shareText += `(請手動輸入金額 $${perPersonStr})\n`;
+    }
+
+    shareText += `\n(由 BillApp 自動計算 🤖)`;
+
+    // 5. 執行分享或 Copy
+    if (navigator.share) { 
+        try { 
+            await navigator.share({ title: `${billName} Bill`, text: shareText }); 
+        } catch (e) {
+            console.log("Share cancelled or failed", e);
+        } 
+    } else { 
+        navigator.clipboard.writeText(shareText).then(() => { 
+            showNoticeModal('Copied', 'Details copied to clipboard.'); 
+        }); 
+    }
 });
 
 document.getElementById('btn-settings').addEventListener('click', () => { document.getElementById('settings-modal').classList.remove('hidden'); }); 
