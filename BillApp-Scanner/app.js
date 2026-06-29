@@ -11,14 +11,19 @@ function showNoticeModal(title, msg) { const modal = document.getElementById('cu
 function autoResizeInput(el) { el.style.width = '0px'; el.style.width = Math.max(45, el.scrollWidth + 5) + 'px'; }
 
 // 🤖 核心 AI 視覺解析引擎 (Gemini)
+// 🤖 核心 AI 視覺解析引擎 (Gemini) - Debug 版
+// 🤖 核心 AI 視覺解析引擎 (Gemini) - Header 傳送終極穩陣版
+// 🤖 核心 AI 視覺解析引擎 (Gemini) - 破解 401 Bug 版
+// 🤖 核心 AI 視覺解析引擎 (Gemini) - 終極標準版
+// 🤖 核心 AI 視覺解析引擎 (Gemini) - 最新 Model 升級版
 async function analyzeImageWithGemini(base64Image) {
-    // ⚠️ 記得喺度填返你自己嘅 Gemini API Key
-    const apiKey = 'AQ.Ab8RN6I2N_ssSLuzzl3WLhbkvXlPypbkXbFGHq2em1vt9eoTXQ'; 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // 👇 繼續用你條 AQ. 開頭嘅 Key，佢係 Work 嘅！
+    const apiKey = 'AQ.Ab8RN6L5S3QeC1s-gzt5IaOevCT42n7KJFdVis3TUicUSk7XTQ'; 
+    
+    // 🌟 將 3.5 換做 2.5 避開大塞車
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
-    // 剷走 'data:image/jpeg;base64,' 前綴
     const base64Data = base64Image.split(',')[1];
-
     const prompt = `
     You are an expert accountant. Analyze this receipt image and extract the subtotal, tax, gratuity/tip, and final total.
     If gratuity, service charge, or auto-gratuity is included, put it in the "gratuity" field.
@@ -37,13 +42,26 @@ async function analyzeImageWithGemini(base64Image) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             contents: [{ parts: [ { text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64Data } } ] }],
-            generationConfig: { response_mime_type: "application/json" } // 強制 AI 只准輸出純 JSON
+            generationConfig: { response_mime_type: "application/json" } 
         })
     });
 
-    if (!response.ok) throw new Error('API Request Failed');
     const data = await response.json();
-    return JSON.parse(data.candidates[0].content.parts[0].text);
+
+    if (!response.ok) {
+        const errorMsg = data.error ? data.error.message : JSON.stringify(data);
+        throw new Error(`API HTTP ${response.status}: ${errorMsg}`);
+    }
+
+    if (!data.candidates || data.candidates.length === 0) {
+        throw new Error(`No Candidates returned. Data: ${JSON.stringify(data)}`);
+    }
+
+    try {
+        return JSON.parse(data.candidates[0].content.parts[0].text);
+    } catch (e) {
+        throw new Error(`JSON Parse Error. AI Output: ${data.candidates[0].content.parts[0].text}`);
+    }
 }
 
 function calculateAndRender() {
@@ -153,11 +171,22 @@ document.getElementById('btn-crop-confirm').addEventListener('click', async () =
             showNoticeModal('No Amount Found', 'AI 搵唔到銀碼，請影得清楚啲！'); 
         }
     } catch (error) { 
-        console.error("AI Error:", error);
-        showNoticeModal('Error', 'AI 解析失敗，請檢查 API Key 或網絡連線。'); 
-    } finally { 
-        btnSnap.innerHTML = originalApertureSVG; btnSnap.classList.remove('scanning'); btnSnap.style.pointerEvents = 'auto'; cameraInput.value = ''; 
-    }
+            // 🌟 DEBUG 重點：將真正嘅 Error Message 印落 UI 同 Console
+            console.error("🔥 AI 終極 Debug Log:", error);
+            
+            // 彈出包含詳細錯誤嘅 Modal，用紅色細字顯示
+            showNoticeModal(
+                'API 診斷錯誤', 
+                `<div style="font-size: 0.85rem; word-break: break-all; color: #ff4444; text-align: left; line-height: 1.4; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                    ${error.message}
+                </div>`
+            ); 
+        } finally { 
+            btnSnap.innerHTML = originalApertureSVG; 
+            btnSnap.classList.remove('scanning'); 
+            btnSnap.style.pointerEvents = 'auto'; 
+            cameraInput.value = ''; 
+        }
 });
 
 btnNext.addEventListener('click', () => { 
