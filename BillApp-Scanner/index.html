@@ -13,8 +13,36 @@
     
     <link rel="stylesheet" href="../shared/core-ui.css">
     <link rel="stylesheet" href="../shared/scanner-ui.css">
-    <link rel="stylesheet" href="style.css?v=52.0">
+    <link rel="stylesheet" href="style.css?v=59.0">
     
+    <style>
+        .input-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .input-with-symbol {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important; /* 內容全部靠右 */
+            width: 140px !important; /* 鎖死外框闊度，保證左邊 Label 絕對唔會跳動 */
+            gap: 2px !important; /* $ 同數字極限貼近 */
+        }
+        .input-with-symbol span {
+            color: #888;
+            font-weight: 500;
+        }
+        .input-with-symbol input {
+            text-align: right !important; /* 數字永遠靠最右 */
+            font-variant-numeric: tabular-nums !important; /* 保證數字字體等寬 */
+            padding: 0 !important;
+            background: transparent;
+            border: none;
+            color: #fff;
+            /* 🚫 已經徹底移除 flex: 1，交返畀 JS 控制最緊貼嘅闊度 */
+        }
+    </style>
+
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body ontouchstart="">
@@ -55,11 +83,10 @@
             <div style="text-align: center; font-size: 0.75rem; color: rgba(255, 255, 255, 0.3); margin-top: 15px; margin-bottom: 10px; letter-spacing: 0.5px; width: 100%; font-family: sans-serif;">
                 Powered by Gemini AI ✨
             </div>
-
         </div>
     </div>
 
-    <div id="info-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3><div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;"><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">V52.0 (Gemini Direct)</span></div><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Cloud Connected</span></div></div><div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div></div></div>
+    <div id="info-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3><div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;"><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">V59.0 (Ultimate Layout)</span></div><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Cloud Connected</span></div></div><div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div></div></div>
     
     <div id="settings-modal" class="modal-overlay hidden">
         <div class="glass-modal-card" style="max-height: 90vh; overflow-y: auto;">
@@ -115,6 +142,6 @@
     
     <div id="custom-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" id="modal-title">Notice</h3><div class="modal-content" id="modal-content"></div><button class="modal-close-btn" id="modal-close-btn">OK</button></div></div>
     
-    <script type="module" src="app.js?v=52.0"></script>
+    <script type="module" src="app.js?v=59.0"></script>
 </body>
 </html>
