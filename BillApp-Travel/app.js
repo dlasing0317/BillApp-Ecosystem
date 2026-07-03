@@ -1,5 +1,5 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V54.0 - Auto-Gratuity Lock)
+// 🌟 FIREBASE SETUP & IMPORT (V55.4 - Dual-Engine AI Fallback)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -12,6 +12,12 @@ initConfirmModal();
 const getCurrentUser = () => { const name = localStorage.getItem('billapp_user_name'); return name ? name.trim() : 'Guest'; };
 
 let currentTripMode = null; let currentTripId = null; let currentTripData = null; let editingExpenseId = null; 
+
+// 🌟 BillApp-Travel 全域外幣與即時匯率暫存狀態
+let currentCurrency = "USD";
+let currentExchangeRate = 1.0000;
+let currentForeignTotal = 0.00;
+
 function navigateTo(pageId) { document.querySelectorAll('.app-page').forEach(p => p.classList.remove('active')); document.getElementById(pageId).classList.add('active'); }
 function showToast(msg) { const toast = document.getElementById('toast-notification'); const toastMsg = document.getElementById('toast-message'); if(!toast) return; toastMsg.textContent = msg; toast.classList.remove('toast-hidden'); toast.classList.add('toast-visible'); setTimeout(() => { toast.classList.remove('toast-visible'); toast.classList.add('toast-hidden'); }, 4000); }
 
@@ -182,7 +188,7 @@ document.getElementById('btn-basic-save').addEventListener('click', async () => 
 });
 
 // ==========================================
-// 🌟 SCANNER / ORB LOGIC (V54.0)
+// 🤖 SCANNER / ORB LOGIC (V55.4 - Dual Engine Fallback)
 // ==========================================
 const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-next'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const assignmentModal = document.getElementById('assignment-modal'); const expenseTitleInput = document.getElementById('expense-title'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image');
 let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 5; let globalSplitValue = 1;
@@ -190,6 +196,7 @@ let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let curre
 let exactTipAmount = null; 
 let isSystemUpdatingDial = false;
 
+// 保留原本 Tesseract 需要用到的商品解析函數
 let globalParsedItems = []; 
 function parseReceiptItems(text) {
     const lines = text.split('\n'); const items = []; let idCounter = 1;
@@ -287,69 +294,112 @@ btnSnap.addEventListener('click', () => cameraInput.click()); document.getElemen
 cameraInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { cropImage.src = e.target.result; cropModal.classList.remove('hidden'); if (cropper) cropper.destroy(); cropper = new Cropper(cropImage, { viewMode: 1, dragMode: 'crop', autoCropArea: 0.8, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false }); }; reader.readAsDataURL(file); });
 const originalApertureSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>`;
 
+// ==========================================
+// 🤖 雙引擎無縫切換系統 (V55.4)
+// ==========================================
+// ==========================================
+// 🤖 GEMINI AI 視覺解析 & 跨國雙幣值即時換算 (V55.5 - 真相大白版)
+// ==========================================
 document.getElementById('btn-crop-confirm').addEventListener('click', async () => {
     if (!cropper) return;
+    
     cropper.getCroppedCanvas({ maxWidth: 1024, maxHeight: 1024 }).toBlob(async (blob) => {
-        cropModal.classList.add('hidden'); cropper.destroy(); btnSnap.classList.add('scanning'); btnSnap.style.pointerEvents = 'none';
+        cropModal.classList.add('hidden'); 
+        cropper.destroy(); 
+        
+        // 啟動 Orb 頂部按鈕的 PWA 脈衝掃描動畫
+        btnSnap.classList.add('scanning'); 
+        btnSnap.style.pointerEvents = 'none';
+        
         try {
-            const result = await window.Tesseract.recognize(blob, 'eng+chi_tra+chi_sim'); 
-            let cleanText = result.data.text.replace(/(\d+)\s*[_\.,]\s*(\d+)/g, "$1.$2").replace(/\d+(?:\.\d+)?\s*%/g, ""); 
-            globalParsedItems = parseReceiptItems(cleanText);
+            // 1. 取得純淨 Base64 (切走 data:image/... 前綴)
+            const base64String = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
 
-            const subRegex = /(?:sub\s*\/?\s*t(?:o)?t(?:a)?l|subtotal|taxable|net)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
-            const taxRegex = /(?:surtax|\btax\b|vat)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
-            const tipRegex = /(?:gratuity|grat|tip|tips|service charge|auto grt)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
-            const totalRegex = /(?:total due|amount due|total amount|\btotal\b|amount)[^\d\n]*?(\d{1,4}(?:,\d{3})*\.\d{2})/i;
+            const cloudRunUrl = 'https://analyze-receipt-315301750535.us-west1.run.app';
+            
+            // 2. 🌟 終極修正：精準對接 Cloud Run 寫死嘅 "base64Image" 鎖匙！
+            const aiResponse = await fetch(cloudRunUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    base64Image: base64String 
+                })
+            });
 
-            const subMatch = cleanText.match(subRegex);
-            const taxMatch = cleanText.match(taxRegex);
-            const tipMatch = cleanText.match(tipRegex);
-            const totalMatch = cleanText.match(totalRegex);
+            if (!aiResponse.ok) throw new Error(`Cloud Run 回傳 HTTP ${aiResponse.status}`);
+            
+            const receiptData = await aiResponse.json();
+            
+            // 3. 跨國即時匯率攔截機制
+            currentCurrency = receiptData.currency || "USD";
+            currentForeignTotal = receiptData.total || 0;
+            currentExchangeRate = 1.0000;
 
-            let parsedSub = subMatch ? parseFloat(subMatch[1].replace(',', '')) : 0;
-            let parsedTax = taxMatch ? parseFloat(taxMatch[1].replace(',', '')) : 0;
-            let parsedTip = tipMatch ? parseFloat(tipMatch[1].replace(',', '')) : 0;
-            let parsedTotal = totalMatch ? parseFloat(totalMatch[1].replace(',', '')) : 0;
+            let finalSubtotal = receiptData.subtotal || 0;
+            let finalTax = receiptData.tax || 0;
+            // 兼容 Scanner 後端回傳嘅 gratuity 或者 exactTip
+            let finalTip = receiptData.exactTip || receiptData.gratuity || 0; 
 
-            const allAmounts = [...cleanText.matchAll(/\b\d{1,4}(?:,\d{3})*\.\d{2}\b/g)].map(m => parseFloat(m[0].replace(',', ''))).sort((a, b) => b - a);
-            if (parsedTotal === 0 && allAmounts.length > 0) parsedTotal = allAmounts[0];
-
-            if (parsedTotal > 0) {
-                if (parsedSub >= parsedTotal) parsedSub = 0; 
-                if (parsedSub === 0) parsedSub = Math.max(0, parsedTotal - parsedTax - parsedTip); 
-                
-                if (parsedTax === 0 && parsedTotal > (parsedSub + parsedTip) && parsedSub > 0) {
-                    parsedTax = parsedTotal - parsedSub - parsedTip;
+            if (currentCurrency !== "USD") {
+                try {
+                    const rateResponse = await fetch('https://open.er-api.com/v6/latest/USD');
+                    if (rateResponse.ok) {
+                        const rateData = await rateResponse.json();
+                        const rateToUSD = rateData.rates[currentCurrency];
+                        if (rateToUSD) {
+                            currentExchangeRate = 1 / rateToUSD;
+                            finalSubtotal = finalSubtotal * currentExchangeRate;
+                            finalTax = finalTax * currentExchangeRate;
+                            if (finalTip > 0) finalTip = finalTip * currentExchangeRate;
+                        }
+                    }
+                } catch (rateErr) {
+                    console.error("即時匯率獲取失敗:", rateErr);
+                    showToast("⚠️ 匯率同步失敗，暫以原幣值填入面版");
                 }
-                if (parsedTip === 0 && parsedTotal > (parsedSub + parsedTax) && parsedSub > 0 && parsedTax > 0) {
-                    const diff = parsedTotal - parsedSub - parsedTax;
-                    if (diff > 1.00) parsedTip = diff; 
-                }
-            } else if (parsedSub > 0) {
-                parsedTotal = parsedSub + parsedTax + parsedTip;
             }
 
-            if (parsedSub > 0 || parsedTotal > 0) { 
-                if (parsedSub === 0 && parsedTotal > 0) parsedSub = parsedTotal; 
-                manualSubtotalInput.value = Math.abs(parseFloat(parsedSub.toFixed(2))); 
-                manualTaxInput.value = Math.abs(parseFloat(parsedTax.toFixed(2))); 
-                
-                if (parsedTip > 0) {
-                    exactTipAmount = parsedTip;
-                    isSystemUpdatingDial = true;
-                    tipDialControl.setValue(0); 
-                    exactTipAmount = parsedTip; 
-                    isSystemUpdatingDial = false;
-                } else {
-                    exactTipAmount = null;
-                    isSystemUpdatingDial = true;
-                    tipDialControl.setValue(5);
-                    isSystemUpdatingDial = false;
-                }
+            // 4. 將計算好的金額精確填入唯讀面板
+            manualSubtotalInput.value = Math.abs(parseFloat(finalSubtotal.toFixed(2))); 
+            manualTaxInput.value = Math.abs(parseFloat(finalTax.toFixed(2))); 
+            
+            if (finalTip > 0) {
+                exactTipAmount = parseFloat(finalTip.toFixed(2));
+                isSystemUpdatingDial = true;
+                tipDialControl.setValue(0); 
+                exactTipAmount = parseFloat(finalTip.toFixed(2)); 
+                isSystemUpdatingDial = false;
+            } else {
+                exactTipAmount = null;
+                isSystemUpdatingDial = true;
+                tipDialControl.setValue(5);
+                isSystemUpdatingDial = false;
+            }
 
-                autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender(); 
-            } else { showNoticeModal('No Amount Found', 'Please try cropping closer to the Subtotal and Tax.'); }
-        } catch (error) { showNoticeModal('Error', 'Recognition failed. Try again.'); } finally { btnSnap.innerHTML = originalApertureSVG; btnSnap.classList.remove('scanning'); btnSnap.style.pointerEvents = 'auto'; cameraInput.value = ''; }
+            autoResizeInput(manualSubtotalInput); 
+            autoResizeInput(manualTaxInput); 
+            calculateAndRender(); 
+            
+            if (currentCurrency !== "USD") {
+                showToast(`🌐 成功辨識 ${currentCurrency}！已自動按匯率換算成美金`);
+            } else {
+                showToast("🤖 美金單據 AI 智能解析完成！");
+            }
+
+        } catch (error) {
+            console.error(error);
+            showNoticeModal('AI 解析失敗', `系統訊息: ${error.message}<br><br>請確認後端網路連線。`);
+        } finally {
+            btnSnap.innerHTML = originalApertureSVG; 
+            btnSnap.classList.remove('scanning'); 
+            btnSnap.style.pointerEvents = 'auto'; 
+            cameraInput.value = ''; 
+        }
     }, 'image/jpeg'); 
 });
 
@@ -368,10 +418,40 @@ btnNext.addEventListener('click', async () => {
 });
 
 document.getElementById('btn-assignment-cancel').addEventListener('click', () => { assignmentModal.classList.add('hidden'); });
+
+// 🌟 將外幣資料 (foreignAmount, currency, rate) 完美寫入 Firestore 結構
 document.getElementById('btn-assignment-save').addEventListener('click', async () => {
-    const title = expenseTitleInput.value.trim() || 'Untitled Expense'; const activePayer = document.querySelector('#paid-by-container .avatar-bubble.active'); const payerName = activePayer ? activePayer.innerText : 'Unknown';
-    const splitNodes = document.querySelectorAll('#split-between-container .avatar-bubble.active'); let splitArray = []; splitNodes.forEach(n => splitArray.push(n.innerText));
-    try { await addDoc(collection(db, `trips/${currentTripId}/expenses`), { title: title, amount: currentGrandTotal, paidBy: payerName, splitBetween: splitArray, splitCount: splitArray.length || 1, createdAt: new Date().toISOString() }); assignmentModal.classList.add('hidden'); manualSubtotalInput.value = ''; manualTaxInput.value = ''; exactTipAmount = null; autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender(); navigateTo('page-trip'); loadExpenses(currentTripId); } catch (e) { showNoticeModal('Error', 'Failed to save expense'); }
+    const title = expenseTitleInput.value.trim() || 'Untitled Expense'; 
+    const activePayer = document.querySelector('#paid-by-container .avatar-bubble.active'); 
+    const payerName = activePayer ? activePayer.innerText : 'Unknown';
+    const splitNodes = document.querySelectorAll('#split-between-container .avatar-bubble.active'); 
+    let splitArray = []; 
+    splitNodes.forEach(n => splitArray.push(n.innerText));
+    
+    try { 
+        await addDoc(collection(db, `trips/${currentTripId}/expenses`), { 
+            title: title, 
+            amount: currentGrandTotal, 
+            foreignAmount: currentForeignTotal, 
+            foreignCurrency: currentCurrency, 
+            exchangeRate: currentExchangeRate, 
+            paidBy: payerName, 
+            splitBetween: splitArray, 
+            splitCount: splitArray.length || 1, 
+            createdAt: new Date().toISOString() 
+        }); 
+        assignmentModal.classList.add('hidden'); 
+        manualSubtotalInput.value = ''; 
+        manualTaxInput.value = ''; 
+        exactTipAmount = null; 
+        autoResizeInput(manualSubtotalInput); 
+        autoResizeInput(manualTaxInput); 
+        calculateAndRender(); 
+        navigateTo('page-trip'); 
+        loadExpenses(currentTripId); 
+    } catch (e) { 
+        showNoticeModal('Error', 'Failed to save expense'); 
+    }
 });
 
 document.getElementById('btn-done').addEventListener('click', () => { manualSubtotalInput.value = ''; manualTaxInput.value = ''; exactTipAmount = null; autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); isSystemUpdatingDial = true; tipDialControl.setValue(5); splitDialControl.setValue(1); isSystemUpdatingDial = false; if (!currentTripMode) navigateTo('page-home'); });
