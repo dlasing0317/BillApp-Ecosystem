@@ -1,5 +1,5 @@
 // ==========================================
-// 🌟 FIREBASE SETUP & IMPORT (V56.0 - 100% Scanner Parity + Itemized Sync)
+// 🌟 FIREBASE SETUP & IMPORT (V58.0 - 100% Scanner Parity + One-Tap Scan)
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -188,7 +188,7 @@ document.getElementById('btn-basic-save').addEventListener('click', async () => 
 });
 
 // ==========================================
-// 🤖 SCANNER / ORB LOGIC & GEMINI ENGINE (V56.0)
+// 🤖 SCANNER / ORB LOGIC & GEMINI ENGINE (V58.0)
 // ==========================================
 const btnSnap = document.getElementById('btn-snap'); const cameraInput = document.getElementById('camera-input'); const resultOrb = document.getElementById('result-orb'); const perPersonAmountDisplay = document.getElementById('per-person-amount'); const btnNext = document.getElementById('btn-next'); const manualSubtotalInput = document.getElementById('manual-subtotal'); const manualTaxInput = document.getElementById('manual-tax'); const assignmentModal = document.getElementById('assignment-modal'); const expenseTitleInput = document.getElementById('expense-title'); const cropModal = document.getElementById('crop-modal'); const cropImage = document.getElementById('crop-image');
 let cropper = null; let scannedSubtotal = 0.00; let scannedTax = 0.00; let currentGrandTotal = 0.00; let currentPerPerson = 0.00; let globalTipValue = 5; let globalSplitValue = 1;
@@ -273,131 +273,134 @@ document.getElementById('btn-settings').addEventListener('click', () => { settin
 document.getElementById('btn-settings-save').addEventListener('click', () => { localStorage.setItem('billapp_user_name', document.getElementById('settings-name-input').value.trim()); localStorage.setItem('billapp_venmo_id', document.getElementById('settings-venmo-input').value.trim()); localStorage.setItem('billapp_zelle_id', document.getElementById('settings-zelle-input').value.trim()); settingsModal.classList.add('hidden'); showNoticeModal('Profile Saved', ''); loadTrips(); setupNotifications(); });
 if (document.getElementById('btn-info')) { document.getElementById('btn-info').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('debug-env').textContent = (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) ? "📱 PWA App" : "🌐 Browser"; document.getElementById('info-modal').classList.remove('hidden'); }); document.getElementById('btn-info-close').addEventListener('click', () => document.getElementById('info-modal').classList.add('hidden')); }
 
-btnSnap.addEventListener('click', () => cameraInput.click()); document.getElementById('btn-crop-cancel').addEventListener('click', () => { cropModal.classList.add('hidden'); if (cropper) cropper.destroy(); cameraInput.value = ''; });
-cameraInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { cropImage.src = e.target.result; cropModal.classList.remove('hidden'); if (cropper) cropper.destroy(); cropper = new Cropper(cropImage, { viewMode: 1, dragMode: 'crop', autoCropArea: 0.8, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false }); }; reader.readAsDataURL(file); });
+// ==========================================
+// 🚀 🤖 一鍵極速掃描 (V58.0 Pure AI-Driven - 移除 Crop 手動步驟)
+// ==========================================
+btnSnap.addEventListener('click', () => cameraInput.click()); 
 const originalApertureSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>`;
 
-// ==========================================
-// 🤖 GEMINI AI 視覺解析 (V56.0 - 完全對接 Scanner 寫法)
-// ==========================================
-document.getElementById('btn-crop-confirm').addEventListener('click', async () => {
-    if (!cropper) return;
-    
-    // 1. 直接用 Canvas 抽圖，飛走 FileReader，保證穩定
-    const canvas = cropper.getCroppedCanvas({ maxWidth: 1500, maxHeight: 1500 });
+cameraInput.addEventListener('change', (event) => { 
+    const file = event.target.files[0]; 
+    if (!file) return; 
 
-    cropModal.classList.add('hidden'); 
-    cropper.destroy(); 
-    
+    // 直接啟動掃描動畫 UI
     btnSnap.classList.add('scanning'); 
     btnSnap.style.pointerEvents = 'none';
-    
-    try {
-        // 2. 完美跟足 Scanner 寫法，提取純淨 Base64
-        const base64Image = canvas.toDataURL('image/jpeg', 0.8);
-        const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
-        // 順手 Save 落 memory 方便分享
-        canvas.toBlob((blob) => { lastScannedImageBlob = blob; }, 'image/jpeg', 0.8);
+    const reader = new FileReader(); 
+    reader.onload = (e) => { 
+        const img = new Image();
+        img.onload = async () => {
+            // 利用 Canvas 在背景自動縮放圖片 (避免上傳原圖 10MB 爆 Quota)
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1500;
+            const MAX_HEIGHT = 1500;
+            let width = img.width; let height = img.height;
 
-        const cloudRunUrl = 'https://analyze-receipt-315301750535.us-west1.run.app';
-        
-        // 3. 完美對接 Cloud Run 鎖死嘅 "base64Image" Payload
-        const aiResponse = await fetch(cloudRunUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ base64Image: base64Data })
-        });
-
-        const receiptData = await aiResponse.json();
-        if (!aiResponse.ok) throw new Error(receiptData.error || `Cloud Run HTTP ${aiResponse.status}`);
-        
-        // 4. Travel 版專屬：跨國即時匯率攔截機制
-        currentCurrency = receiptData.currency || "USD";
-        currentForeignTotal = receiptData.total || 0;
-        currentExchangeRate = 1.0000;
-
-        let finalSubtotal = receiptData.subtotal || 0;
-        let finalTax = receiptData.tax || 0;
-        let finalTip = receiptData.exactTip || receiptData.gratuity || 0; 
-
-        if (currentCurrency !== "USD") {
+            if (width > height) {
+                if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+            } else {
+                if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+            }
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // 順手 Save 留底畀 WhatsApp Share
+            canvas.toBlob((blob) => { lastScannedImageBlob = blob; }, 'image/jpeg', 0.8);
+            const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+            const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+            
             try {
-                const rateResponse = await fetch('https://open.er-api.com/v6/latest/USD');
-                if (rateResponse.ok) {
-                    const rateData = await rateResponse.json();
-                    const rateToUSD = rateData.rates[currentCurrency];
-                    if (rateToUSD) {
-                        currentExchangeRate = 1 / rateToUSD;
-                        finalSubtotal = finalSubtotal * currentExchangeRate;
-                        finalTax = finalTax * currentExchangeRate;
-                        if (finalTip > 0) finalTip = finalTip * currentExchangeRate;
+                const cloudRunUrl = 'https://analyze-receipt-315301750535.us-west1.run.app';
+                
+                // 1. 直飛 Cloud Run 獲取 AI 結果 (與你 V56.0 邏輯完全一樣)
+                const aiResponse = await fetch(cloudRunUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ base64Image: base64Data })
+                });
+
+                const receiptData = await aiResponse.json();
+                if (!aiResponse.ok) throw new Error(receiptData.error || `Cloud Run HTTP ${aiResponse.status}`);
+                
+                // 2. 獲取原幣值與即時匯率換算
+                currentCurrency = receiptData.currency || "USD";
+                currentForeignTotal = receiptData.total || 0;
+                currentExchangeRate = 1.0000;
+
+                let finalSubtotal = receiptData.subtotal || 0; 
+                let finalTax = receiptData.tax || 0; 
+                let finalTip = receiptData.exactTip || receiptData.gratuity || 0; 
+
+                if (currentCurrency !== "USD") {
+                    try {
+                        const rateResponse = await fetch('https://open.er-api.com/v6/latest/USD');
+                        if (rateResponse.ok) {
+                            const rateData = await rateResponse.json();
+                            const rateToUSD = rateData.rates[currentCurrency];
+                            if (rateToUSD) {
+                                currentExchangeRate = 1 / rateToUSD;
+                                finalSubtotal = finalSubtotal * currentExchangeRate;
+                                finalTax = finalTax * currentExchangeRate;
+                                if (finalTip > 0) finalTip = finalTip * currentExchangeRate;
+                            }
+                        }
+                    } catch (err) { 
+                        console.error("匯率同步失敗:", err); 
+                        showToast("⚠️ 匯率同步失敗，暫以原幣值填入面版"); 
                     }
                 }
-            } catch (rateErr) {
-                console.error("即時匯率獲取失敗:", rateErr);
-                showToast("⚠️ 匯率同步失敗，暫以原幣值填入面版");
-            }
-        }
 
-        // 5. Travel 版專屬：提取點心 (Items) 畀 Itemized 模式
-        globalParsedItems = [];
-        const apiItems = receiptData.items || receiptData.lineItems || receiptData.line_items || [];
-        
-        if (apiItems && Array.isArray(apiItems) && apiItems.length > 0) {
-            apiItems.forEach((item, index) => {
-                let price = parseFloat(item.price || item.amount || item.total || 0);
-                let name = item.name || item.description || item.title || `Item ${index + 1}`;
-                
-                if (price > 0) {
-                    // 個別物品也要按匯率換算成美金
-                    let finalItemPrice = currentCurrency !== "USD" ? price * currentExchangeRate : price;
-                    globalParsedItems.push({
-                        id: 'item_gemini_' + index,
-                        name: name,
-                        price: finalItemPrice,
-                        assignedTo: []
+                // 3. 對接 Cloud Run 更新後的 items 清單到畫筆系統
+                globalParsedItems = [];
+                const apiItems = receiptData.items || receiptData.lineItems || receiptData.line_items || [];
+                if (apiItems && Array.isArray(apiItems) && apiItems.length > 0) {
+                    apiItems.forEach((item, index) => {
+                        let price = parseFloat(item.price || item.amount || item.total || 0);
+                        let name = item.name || item.description || item.title || `Item ${index + 1}`;
+                        if (price > 0) {
+                            let finalItemPrice = currentCurrency !== "USD" ? price * currentExchangeRate : price;
+                            globalParsedItems.push({
+                                id: 'item_gemini_' + index,
+                                name: name,
+                                price: finalItemPrice,
+                                assignedTo: []
+                            });
+                        }
                     });
                 }
-            });
-        }
 
-        // 將計算好的金額精確填入唯讀面板
-        manualSubtotalInput.value = Math.abs(parseFloat(finalSubtotal.toFixed(2))); 
-        manualTaxInput.value = Math.abs(parseFloat(finalTax.toFixed(2))); 
-        
-        if (finalTip > 0) {
-            exactTipAmount = parseFloat(finalTip.toFixed(2));
-            isSystemUpdatingDial = true;
-            tipDialControl.setValue(0); 
-            exactTipAmount = parseFloat(finalTip.toFixed(2)); 
-            isSystemUpdatingDial = false;
-        } else {
-            exactTipAmount = null;
-            isSystemUpdatingDial = true;
-            tipDialControl.setValue(5);
-            isSystemUpdatingDial = false;
-        }
+                // 4. 面板數值灌入
+                manualSubtotalInput.value = Math.abs(parseFloat(finalSubtotal.toFixed(2))); 
+                manualTaxInput.value = Math.abs(parseFloat(finalTax.toFixed(2))); 
+                
+                if (finalTip > 0) {
+                    exactTipAmount = parseFloat(finalTip.toFixed(2));
+                    isSystemUpdatingDial = true; tipDialControl.setValue(0); 
+                    exactTipAmount = parseFloat(finalTip.toFixed(2)); isSystemUpdatingDial = false;
+                } else {
+                    exactTipAmount = null;
+                    isSystemUpdatingDial = true; tipDialControl.setValue(5); isSystemUpdatingDial = false;
+                }
+                
+                autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput);
+                calculateAndRender(); 
+                showToast(currentCurrency !== "USD" ? `🌐 成功辨識 ${currentCurrency} 匯率與項目！` : "🤖 雲端 AI 智能解析完成！");
 
-        autoResizeInput(manualSubtotalInput); 
-        autoResizeInput(manualTaxInput); 
-        calculateAndRender(); 
-        
-        if (currentCurrency !== "USD") {
-            showToast(`🌐 成功辨識 ${currentCurrency}！已自動按匯率換算成美金`);
-        } else {
-            showToast("🤖 美金單據 AI 智能解析完成！");
-        }
-
-    } catch (error) {
-        console.error(error);
-        showNoticeModal('AI 解析失敗', `系統訊息: ${error.message}<br><br>請確認後端網路連線。`);
-    } finally {
-        btnSnap.innerHTML = originalApertureSVG; 
-        btnSnap.classList.remove('scanning'); 
-        btnSnap.style.pointerEvents = 'auto'; 
-        cameraInput.value = ''; 
-    }
+            } catch (error) { 
+                console.error("🔥 AI Debug Log:", error);
+                showNoticeModal('AI 解析失敗', `系統訊息: ${error.message}<br><br>請確認後端網路連線。`); 
+            } finally { 
+                btnSnap.innerHTML = originalApertureSVG; 
+                btnSnap.classList.remove('scanning'); 
+                btnSnap.style.pointerEvents = 'auto'; 
+                cameraInput.value = ''; 
+            }
+        };
+        img.src = e.target.result;
+    }; 
+    reader.readAsDataURL(file); 
 });
 
 btnNext.addEventListener('click', async () => {
