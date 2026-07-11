@@ -203,58 +203,57 @@ btnNext.addEventListener('click', () => {
 });
 
 // ==========================================
-// 🚀 核心優化：整合並修正「原生檔案級」相片分享邏輯
+// 🚀 Share Module (English Version)
 // ==========================================
 document.getElementById('btn-share').addEventListener('click', async () => {
-    if (currentGrandTotal === 0) { showNoticeModal('Empty Bill', '大佬，未入銀碼喎！'); return; }
+    if (currentGrandTotal === 0) { showNoticeModal('Empty Bill', 'Please enter an amount first!'); return; }
     
     const billNameInput = document.getElementById('manual-title').value.trim();
-    const billName = billNameInput || "聚餐";
+    const billName = billNameInput || "Dining";
     const encodedBillName = encodeURIComponent(billName + " Bill"); 
-    const myName = document.getElementById('profileName')?.value.trim() || "我";
+    const myName = document.getElementById('profileName')?.value.trim() || "Me";
 
     const venmo = document.getElementById('profileVenmo')?.value.trim();
     const zelle = document.getElementById('profileZelle')?.value.trim();
     const paypal = document.getElementById('profilePaypal')?.value.trim();
     const perPersonStr = currentPerPerson.toFixed(2);
     
-    let shareText = `🍽️ ${myName} 送來了${billName}帳單明細\n\n`;
-    shareText += `🔷 稅前 (Subtotal): $${scannedSubtotal.toFixed(2)}\n`;
-    shareText += `🔷 稅金 (Tax): $${scannedTax.toFixed(2)}\n`;
+    let shareText = `🍽️ ${myName} shared the "${billName}" bill\n\n`;
+    shareText += `🔷 Subtotal: $${scannedSubtotal.toFixed(2)}\n`;
+    shareText += `🔷 Tax: $${scannedTax.toFixed(2)}\n`;
     
     if (exactTipAmount !== null && exactTipAmount > 0) {
-        shareText += `🔷 貼士 (Tip Incl.): $${exactTipAmount.toFixed(2)}\n`;
+        shareText += `🔷 Tip (Incl.): $${exactTipAmount.toFixed(2)}\n`;
     } else {
-        shareText += `🔷 貼士 (Tip ${globalTipValue}%): $${(scannedSubtotal * (globalTipValue / 100)).toFixed(2)}\n`;
+        shareText += `🔷 Tip (${globalTipValue}%): $${(scannedSubtotal * (globalTipValue / 100)).toFixed(2)}\n`;
     }
     
-    shareText += `💰 總金額 (Total): $${currentGrandTotal.toFixed(2)}\n\n`;
-    shareText += `👥 分攤人數: ${globalSplitValue} 人\n`;
-    shareText += `👉 每人應付: $${perPersonStr}\n\n`;
-    shareText += `👇 請選擇付款方式 👇\n`;
+    shareText += `💰 Total: $${currentGrandTotal.toFixed(2)}\n\n`;
+    shareText += `👥 Split: ${globalSplitValue} ppl\n`;
+    shareText += `👉 Per Person: $${perPersonStr}\n\n`;
+    shareText += `👇 Payment Options 👇\n`;
 
     if (venmo) {
-        shareText += `\n🔵 點擊使用 Venmo 快速付款:\n`;
+        shareText += `\n🔵 Pay via Venmo:\n`;
         shareText += `https://venmo.com/?tx=pay&recipients=${venmo}&amount=${perPersonStr}&note=${encodedBillName}\n`;
     }
     if (paypal) {
-        shareText += `\n🟡 點擊使用 PayPal 快速付款:\n`;
+        shareText += `\n🟡 Pay via PayPal:\n`;
         shareText += `https://paypal.me/${paypal}/${perPersonStr}\n`;
     }
     if (zelle) {
-        shareText += `\n🟣 Zelle 轉帳帳號 (請複製):\n`;
+        shareText += `\n🟣 Zelle (Copy to pay):\n`;
         shareText += `${zelle}\n`;
-        shareText += `(請手動輸入金額 $${perPersonStr})\n`;
+        shareText += `(Please enter $${perPersonStr})\n`;
     }
-    shareText += `\n(由 BillApp 自動計算 🤖)`;
+    shareText += `\n(Calculated by BillApp 🤖)`;
 
     const shareData = { title: `${billName} Bill`, text: shareText };
 
-    // 🌟 關鍵修復：嚴格封裝二進制 Blob 為原生 File 結構，強制指定 image/jpeg 打包發送
+    // 🌟 Strict encapsulation of the binary Blob into a native File structure for image sharing
     if (lastScannedImageBlob) {
         try {
             const file = new File([lastScannedImageBlob], 'receipt.jpg', { type: 'image/jpeg' });
-            // 檢查當前系統（尤其是 iOS WebKit）是否支援此檔案組合分享
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 shareData.files = [file];
             }
