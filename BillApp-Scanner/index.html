@@ -13,7 +13,7 @@
     
     <link rel="stylesheet" href="../shared/core-ui.css">
     <link rel="stylesheet" href="../shared/scanner-ui.css">
-    <link rel="stylesheet" href="style.css?v=59.0">
+    <link rel="stylesheet" href="style.css?v=62.0">
     
     <style>
         .input-line {
@@ -21,29 +21,33 @@
             justify-content: space-between;
             align-items: center;
         }
-        .input-with-symbol {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: flex-end !important; /* 內容全部靠右 */
-            width: 140px !important; /* 鎖死外框闊度，保證左邊 Label 絕對唔會跳動 */
-            gap: 2px !important; /* $ 同數字極限貼近 */
-        }
-        .input-with-symbol span {
+        .input-line label {
             color: #888;
             font-weight: 500;
         }
-        .input-with-symbol input {
+        /* 🎯 核心修復：強制所有輸入框、唯讀框、包括 iOS 特有樣式，全部統一為一致的灰色 */
+        .input-line input, 
+        .input-line input[readonly],
+        .input-line input:disabled {
             text-align: right !important; /* 數字永遠靠最右 */
-            font-variant-numeric: tabular-nums !important; /* 保證數字字體等寬 */
+            font-variant-numeric: tabular-nums !important; /* 等寬數字，小數點對齊 */
+            width: 120px !important; /* 固定闊度，防跳動 */
             padding: 0 !important;
-            background: transparent;
-            border: none;
-            color: #fff;
-            /* 🚫 已經徹底移除 flex: 1，交返畀 JS 控制最緊貼嘅闊度 */
+            background: transparent !important;
+            border: none !important;
+            color: #a0a5b5 !important; /* 🌟 統一高質感深灰色 */
+            -webkit-text-fill-color: #a0a5b5 !important; /* 🛠️ 專治 iOS Safari 唯讀變色問題 */
+            font-size: 1rem !important;
+            opacity: 1 !important; /* 防止 iOS 自動變淡 */
+        }
+        /* 餐廳名輸入框保持左對齊 */
+        .title-line input {
+            text-align: left !important;
+            width: 100% !important;
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
         }
     </style>
-
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body ontouchstart="">
     <input type="file" id="camera-input" accept="image/*" style="display: none;">
@@ -64,84 +68,51 @@
         <div class="bottom-controls-row">
             <div class="manual-panel">
                 <div class="glass-box">
-                    <div class="input-line title-line" style="margin-bottom: 5px;"><input type="text" id="manual-title" placeholder="Optional: Name of the bill (e.g. McDonald's)"></div>
+                    <div class="input-line title-line"><input type="text" id="manual-title" placeholder="Optional: Name of the bill (e.g. McDonald's)"></div>
                     <div class="divider"></div>
-                    <div class="input-line"><label>Subtotal</label><div class="input-with-symbol"><span>$</span><input type="number" id="manual-subtotal" placeholder="0.00" step="0.01"></div></div>
+                    <div class="input-line"><label>Subtotal</label><input type="number" id="manual-subtotal" placeholder="0.00" step="0.01"></div>
                     <div class="divider"></div>
-                    <div class="input-line"><label id="tax-label">Tax</label><div class="input-with-symbol"><span>$</span><input type="number" id="manual-tax" placeholder="0.00" step="0.01"></div></div>
+                    <div class="input-line"><label id="tax-label">Tax</label><input type="number" id="manual-tax" placeholder="0.00" step="0.01"></div>
                     <div class="divider"></div>
-                    <div class="input-line"><label id="summary-tip-label">Tip (0%)</label><div class="input-with-symbol"><span>$</span><input type="text" id="summary-tip-amount" value="0.00" readonly tabindex="-1" style="pointer-events: none;"></div></div>
+                    <div class="input-line"><label id="summary-tip-label">Tip (0%)</label><input type="text" id="summary-tip-amount" value="0.00" readonly tabindex="-1"></div>
                     <div class="divider"></div>
-                    <div class="input-line"><label>Total</label><div class="input-with-symbol"><span>$</span><input type="text" id="summary-total-amount" value="0.00" readonly tabindex="-1" style="pointer-events: none;"></div></div>
+                    <div class="input-line"><label>Total</label><input type="text" id="summary-total-amount" value="0.00" readonly tabindex="-1"></div>
                 </div>
             </div>
+            
             <div class="actions-panel">
                 <div class="action-wrapper"><button class="action-circle-btn share-btn" id="btn-share"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg></button></div>
                 <div class="action-wrapper"><button class="action-circle-btn done-btn" id="btn-done"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><polyline points="20 6 9 17 4 12"></polyline></svg></button></div>
             </div>
-            
-            <div style="text-align: center; font-size: 0.75rem; color: rgba(255, 255, 255, 0.3); margin-top: 15px; margin-bottom: 10px; letter-spacing: 0.5px; width: 100%; font-family: sans-serif;">
-                Powered by Gemini AI ✨
-            </div>
+            <div style="text-align: center; font-size: 0.75rem; color: rgba(255, 255, 255, 0.3); margin-top: 15px; margin-bottom: 10px; width: 100%;">Powered by Gemini AI ✨</div>
         </div>
     </div>
 
-    <div id="info-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" style="margin-bottom: 20px;">System Diagnostics</h3><div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;"><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">V59.0 (Ultimate Layout)</span></div><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">Environment</span><span id="debug-env" style="font-weight: 500; color: #fff;">Cloud Connected</span></div></div><div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close Panel</button></div></div></div>
+    <div id="info-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" style="margin-bottom: 20px;">Diagnostics</h3><div class="modal-content" style="gap: 12px; display: flex; flex-direction: column; width: 100%; text-align: left;"><div class="modal-input-glass" style="padding: 12px; background: rgba(0,0,0,0.2);"><span style="color: var(--text-dim); font-size: 0.85rem; display: block;">App Version</span><span style="font-weight: 600; color: #fff;">V62.0 (Perfect Color Alignment)</span></div></div><div style="width: 100%; margin-top: 20px;"><button class="modal-close-btn" id="btn-info-close" style="width: 100%;">Close</button></div></div></div>
     
     <div id="settings-modal" class="modal-overlay hidden">
         <div class="glass-modal-card" style="max-height: 90vh; overflow-y: auto;">
             <h3 class="modal-title" style="margin-bottom: 25px;">Setup Profile</h3>
-            
             <div class="modal-content" style="gap: 15px; display: flex; flex-direction: column; width: 100%;">
-                
                 <div id="loginSection" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
-                    <div style="font-size: 0.85rem; color: var(--text-dim, #888); text-align: center;">Login to sync your profile to cloud</div>
-                    
-                    <div class="modal-input-glass">
-                        <label>USERNAME</label>
-                        <input type="text" id="usernameInput" placeholder="e.g. dennis">
-                    </div>
-                    <div class="modal-input-glass">
-                        <label>PIN CODE</label>
-                        <input type="password" id="passwordInput" placeholder="4-6 Digit PIN" inputmode="numeric" pattern="[0-9]*">
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
-                        <button class="modal-close-btn" onclick="document.getElementById('settings-modal').classList.add('hidden')" style="background: #21242D; color: #fff;">Cancel</button>
-                        <button class="modal-close-btn" onclick="handleLogin()">Login</button>
-                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-dim); text-align: center;">Login to sync your profile</div>
+                    <div class="modal-input-glass"><label>USERNAME</label><input type="text" id="usernameInput" placeholder="e.g. dennis"></div>
+                    <div class="modal-input-glass"><label>PIN CODE</label><input type="password" id="passwordInput" placeholder="4-6 Digit PIN" inputmode="numeric" pattern="[0-9]*"></div>
+                    <div style="display: flex; gap: 10px; width: 100%; margin-top: 10px;"><button class="modal-close-btn" onclick="document.getElementById('settings-modal').classList.add('hidden')" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" onclick="handleLogin()">Login</button></div>
                 </div>
-
                 <div id="profileSection" style="display: none; flex-direction: column; gap: 15px; width: 100%;">
-                    <div class="modal-input-glass">
-                        <label>NAME</label>
-                        <input type="text" id="profileName" placeholder="Name">
-                    </div>
-                    <div class="modal-input-glass">
-                        <label>VENMO ID</label>
-                        <input type="text" id="profileVenmo" placeholder="Without @">
-                    </div>
-                    <div class="modal-input-glass">
-                        <label>ZELLE</label>
-                        <input type="text" id="profileZelle" placeholder="Phone/Email">
-                    </div>
-                    <div class="modal-input-glass">
-                        <label>PAYPAL</label>
-                        <input type="text" id="profilePaypal" placeholder="Username">
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
-                        <button class="modal-close-btn" onclick="document.getElementById('settings-modal').classList.add('hidden')" style="background: #21242D; color: #fff;">Cancel</button>
-                        <button class="modal-close-btn" onclick="saveProfile()">Save Profile</button>
-                    </div>
+                    <div class="modal-input-glass"><label>NAME</label><input type="text" id="profileName" placeholder="Name"></div>
+                    <div class="modal-input-glass"><label>VENMO ID</label><input type="text" id="profileVenmo" placeholder="Without @"></div>
+                    <div class="modal-input-glass"><label>ZELLE</label><input type="text" id="profileZelle" placeholder="Phone/Email"></div>
+                    <div class="modal-input-glass"><label>PAYPAL</label><input type="text" id="profilePaypal" placeholder="Username"></div>
+                    <div style="display: flex; gap: 10px; width: 100%; margin-top: 10px;"><button class="modal-close-btn" onclick="document.getElementById('settings-modal').classList.add('hidden')" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" onclick="saveProfile()">Save Profile</button></div>
                 </div>
-
             </div>
         </div>
     </div>
     
     <div id="custom-modal" class="modal-overlay hidden"><div class="glass-modal-card"><h3 class="modal-title" id="modal-title">Notice</h3><div class="modal-content" id="modal-content"></div><button class="modal-close-btn" id="modal-close-btn">OK</button></div></div>
     
-    <script type="module" src="app.js?v=59.0"></script>
+    <script type="module" src="app.js?v=62.0"></script>
 </body>
 </html>

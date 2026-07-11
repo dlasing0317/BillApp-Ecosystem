@@ -1,13 +1,11 @@
 // ==========================================
-// 🌟 V100.3: Gemini AI Vision + Cloud Sync + Auto-Resize (No Cropper)
+// 🌟 V100.9: Gemini AI Vision + Cloud Sync + Perfect Receipt Image Sharing
 // ==========================================
 
-// 1️⃣ 引入 Firebase 官方最新版 CDN 模組 SDK
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// 2️⃣ 你的真實 Firebase 金鑰
 const firebaseConfig = {
   apiKey: "AIzaSyBkS7L59BzlNCfpYM2_pWkNQcOodVcdORc",
   authDomain: "gen-lang-client-0370049065.firebaseapp.com",
@@ -17,14 +15,10 @@ const firebaseConfig = {
   appId: "1:315301750535:web:000fced25beebb8bfb47a2"
 };
 
-// 初始化 Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ==========================================
-// 🌟 UI 與 DOM 變數定義 (已移除 Cropper)
-// ==========================================
 const btnSnap = document.getElementById('btn-snap'); 
 const cameraInput = document.getElementById('camera-input'); 
 const resultOrb = document.getElementById('result-orb'); 
@@ -38,6 +32,7 @@ let currentGrandTotal = 0.00; let currentPerPerson = 0.00;
 let globalTipValue = 5; let globalSplitValue = 1;
 let exactTipAmount = null; 
 let isSystemUpdatingDial = false; 
+let lastScannedImageBlob = null; // 🌟 用作完美儲存原生 Receipt 檔案
 
 function showNoticeModal(title, msg) { 
     const modal = document.getElementById('custom-modal'); 
@@ -47,33 +42,19 @@ function showNoticeModal(title, msg) {
     document.getElementById('modal-close-btn').onclick = () => modal.classList.add('hidden'); 
 }
 
-function autoResizeInput(el) { 
-    el.style.width = '0px'; 
-    // 加大 buffer 去 20px，防止 iPhone Safari 食字
-    el.style.width = Math.max(50, el.scrollWidth + 20) + 'px'; 
-}
-
-// ==========================================
-// 🤖 核心 AI 視覺解析引擎 (直連 Cloud Run)
-// ==========================================
 async function analyzeImageWithGemini(base64Image) {
     const url = 'https://analyze-receipt-315301750535.us-west1.run.app';
     const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
-
     const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ base64Image: base64Data })
     });
-
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Backend Serverless API Failed');
     return data; 
 }
 
-// ==========================================
-// 🧮 計算與渲染邏輯
-// ==========================================
 function calculateAndRender() {
     const sub = parseFloat(manualSubtotalInput.value) || 0; 
     const tax = parseFloat(manualTaxInput.value) || 0; 
@@ -104,6 +85,7 @@ function calculateAndRender() {
     
     const summaryTipInput = document.getElementById('summary-tip-amount'); 
     const summaryTotalInput = document.getElementById('summary-total-amount');
+    
     if (summaryTipInput) summaryTipInput.value = tipAmount.toFixed(2); 
     if (summaryTotalInput) summaryTotalInput.value = currentGrandTotal.toFixed(2);
     
@@ -123,12 +105,9 @@ function calculateAndRender() {
     currentGrandTotal > 0 ? resultOrb.classList.remove('inactive') : resultOrb.classList.add('inactive');
 }
 
-manualSubtotalInput.addEventListener('input', function() { exactTipAmount = null; autoResizeInput(this); calculateAndRender(); }); 
-manualTaxInput.addEventListener('input', function() { exactTipAmount = null; autoResizeInput(this); calculateAndRender(); });
+manualSubtotalInput.addEventListener('input', function() { exactTipAmount = null; calculateAndRender(); }); 
+manualTaxInput.addEventListener('input', function() { exactTipAmount = null; calculateAndRender(); });
 
-// ==========================================
-// 🎛️ 旋鈕控制 (Dials)
-// ==========================================
 function setupCircularDial(wrapperId, ringId, thumbId, displayId, min, max, step, initialValue, isPercent, onChangeCallback) {
     const wrapper = document.getElementById(wrapperId); const ring = document.getElementById(ringId); const thumb = document.getElementById(thumbId); const display = document.getElementById(displayId);
     let currentValue = initialValue; const r = 38; const cx = 50; const cy = 50; const circumference = 2 * Math.PI * r; const arcDegrees = 270; const arcLength = circumference * (arcDegrees / 360); ring.style.strokeDasharray = `${arcLength} ${circumference}`;
@@ -144,9 +123,6 @@ const tipDialControl = setupCircularDial('tip-wrapper', 'tip-ring', 'tip-thumb',
 }); 
 const splitDialControl = setupCircularDial('split-wrapper', 'split-ring', 'split-thumb', 'split-display', 1, 20, 1, 1, false, (val) => { globalSplitValue = val; calculateAndRender(); });
 
-// ==========================================
-// 📸 相機與隱形縮圖核心邏輯 (一鍵掃描)
-// ==========================================
 const originalApertureSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>`;
 
 btnSnap.addEventListener('click', () => cameraInput.click()); 
@@ -155,13 +131,11 @@ cameraInput.addEventListener('change', (event) => {
     const file = event.target.files[0]; 
     if (!file) return; 
 
-    // UI 即刻變 Scanning 狀態
     btnSnap.classList.add('scanning'); 
     btnSnap.style.pointerEvents = 'none';
 
     const reader = new FileReader(); 
     reader.onload = (e) => { 
-        // 🖼️ 隱形極速縮圖 (防止 iPhone 原圖過大塞爆 API)
         const img = new Image();
         img.onload = async () => {
             const canvas = document.createElement('canvas');
@@ -178,10 +152,13 @@ cameraInput.addEventListener('change', (event) => {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
             
-            // 轉做輕量版 Base64
+            // 🌟 核心防彈修正：在壓縮畫質的同時，將 Blob 寫入全域變數
+            canvas.toBlob((blob) => { 
+                lastScannedImageBlob = blob; 
+            }, 'image/jpeg', 0.8);
+            
             const base64Image = canvas.toDataURL('image/jpeg', 0.8);
             
-            // 🚀 直接掟畀 Gemini API！
             try {
                 const aiResult = await analyzeImageWithGemini(base64Image);
                 let parsedSub = aiResult.subtotal || 0; 
@@ -199,7 +176,8 @@ cameraInput.addEventListener('change', (event) => {
                     } else {
                         exactTipAmount = null; isSystemUpdatingDial = true; tipDialControl.setValue(5); isSystemUpdatingDial = false;
                     }
-                    autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender(); 
+                    
+                    calculateAndRender(); 
                 } else { 
                     showNoticeModal('No Amount Found', 'AI 搵唔到銀碼，請影得清楚啲！'); 
                 }
@@ -207,7 +185,6 @@ cameraInput.addEventListener('change', (event) => {
                 console.error("🔥 AI Debug Log:", error);
                 showNoticeModal('API 診斷錯誤', `<div style="font-size: 0.85rem; word-break: break-all; color: #ff4444; text-align: left; line-height: 1.4; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px;">${error.message}</div>`); 
             } finally { 
-                // 還原按鈕狀態
                 btnSnap.innerHTML = originalApertureSVG; 
                 btnSnap.classList.remove('scanning'); 
                 btnSnap.style.pointerEvents = 'auto'; 
@@ -219,37 +196,32 @@ cameraInput.addEventListener('change', (event) => {
     reader.readAsDataURL(file); 
 });
 
-// ==========================================
-// ⚙️ 其他按鈕與 Modals
-// ==========================================
 btnNext.addEventListener('click', () => { 
     manualSubtotalInput.value = ''; manualTaxInput.value = ''; exactTipAmount = null;
-    autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); 
     isSystemUpdatingDial = true; tipDialControl.setValue(0); splitDialControl.setValue(1); isSystemUpdatingDial = false;
+    lastScannedImageBlob = null; 
 });
 
+// ==========================================
+// 🚀 核心優化：整合並修正「原生檔案級」相片分享邏輯
+// ==========================================
 document.getElementById('btn-share').addEventListener('click', async () => {
     if (currentGrandTotal === 0) { showNoticeModal('Empty Bill', '大佬，未入銀碼喎！'); return; }
     
-    // 1. 抓取你填嘅 Bill Name 同你個名
     const billNameInput = document.getElementById('manual-title').value.trim();
     const billName = billNameInput || "聚餐";
-    const encodedBillName = encodeURIComponent(billName + " Bill"); // 轉換為網址安全格式，畀 Venmo Note 用
+    const encodedBillName = encodeURIComponent(billName + " Bill"); 
     const myName = document.getElementById('profileName')?.value.trim() || "我";
 
-    // 2. 抓取 Profile 裡面嘅收款戶口
     const venmo = document.getElementById('profileVenmo')?.value.trim();
     const zelle = document.getElementById('profileZelle')?.value.trim();
     const paypal = document.getElementById('profilePaypal')?.value.trim();
-
     const perPersonStr = currentPerPerson.toFixed(2);
     
-    // 3. 組合完美中文 WhatsApp 格式
     let shareText = `🍽️ ${myName} 送來了${billName}帳單明細\n\n`;
     shareText += `🔷 稅前 (Subtotal): $${scannedSubtotal.toFixed(2)}\n`;
     shareText += `🔷 稅金 (Tax): $${scannedTax.toFixed(2)}\n`;
     
-    // 判斷 Tip 係包含咗定係百分比
     if (exactTipAmount !== null && exactTipAmount > 0) {
         shareText += `🔷 貼士 (Tip Incl.): $${exactTipAmount.toFixed(2)}\n`;
     } else {
@@ -259,48 +231,53 @@ document.getElementById('btn-share').addEventListener('click', async () => {
     shareText += `💰 總金額 (Total): $${currentGrandTotal.toFixed(2)}\n\n`;
     shareText += `👥 分攤人數: ${globalSplitValue} 人\n`;
     shareText += `👉 每人應付: $${perPersonStr}\n\n`;
-    
     shareText += `👇 請選擇付款方式 👇\n`;
 
-    // 4. 動態加入收款 Link (有填資料先會顯示)
     if (venmo) {
         shareText += `\n🔵 點擊使用 Venmo 快速付款:\n`;
-        // Venmo Deep Link: 自動帶入 ID, 銀碼, 同埋 Note
         shareText += `https://venmo.com/?tx=pay&recipients=${venmo}&amount=${perPersonStr}&note=${encodedBillName}\n`;
     }
-    
     if (paypal) {
         shareText += `\n🟡 點擊使用 PayPal 快速付款:\n`;
-        // PayPal.me Link: 自動帶入 ID 同銀碼
         shareText += `https://paypal.me/${paypal}/${perPersonStr}\n`;
     }
-
     if (zelle) {
         shareText += `\n🟣 Zelle 轉帳帳號 (請複製):\n`;
         shareText += `${zelle}\n`;
         shareText += `(請手動輸入金額 $${perPersonStr})\n`;
     }
-
     shareText += `\n(由 BillApp 自動計算 🤖)`;
 
-    // 5. 執行分享或 Copy
+    const shareData = { title: `${billName} Bill`, text: shareText };
+
+    // 🌟 關鍵修復：嚴格封裝二進制 Blob 為原生 File 結構，強制指定 image/jpeg 打包發送
+    if (lastScannedImageBlob) {
+        try {
+            const file = new File([lastScannedImageBlob], 'receipt.jpg', { type: 'image/jpeg' });
+            // 檢查當前系統（尤其是 iOS WebKit）是否支援此檔案組合分享
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                shareData.files = [file];
+            }
+        } catch (err) {
+            console.error("File encapsulation failed:", err);
+        }
+    }
+
     if (navigator.share) { 
         try { 
-            await navigator.share({ title: `${billName} Bill`, text: shareText }); 
-        } catch (e) {
-            console.log("Share cancelled or failed", e);
+            await navigator.share(shareData); 
+        } catch (e) { 
+            console.log("Share cancelled or failed", e); 
         } 
     } else { 
-        navigator.clipboard.writeText(shareText).then(() => { 
-            showNoticeModal('Copied', 'Details copied to clipboard.'); 
-        }); 
+        navigator.clipboard.writeText(shareText).then(() => { showNoticeModal('Copied', 'Details copied to clipboard.'); }); 
     }
 });
 
 document.getElementById('btn-settings').addEventListener('click', () => { document.getElementById('settings-modal').classList.remove('hidden'); }); 
 if (document.getElementById('btn-info')) { document.getElementById('btn-info').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('info-modal').classList.remove('hidden'); }); document.getElementById('btn-info-close').addEventListener('click', () => document.getElementById('info-modal').classList.add('hidden')); }
 
-autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculateAndRender();
+calculateAndRender();
 
 // ==========================================
 // ☁️ Firebase Auth & Firestore 儲存邏輯
@@ -308,13 +285,11 @@ autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculate
 window.handleLogin = async function() {
     const username = document.getElementById('usernameInput').value.toLowerCase().trim();
     const pin = document.getElementById('passwordInput').value;
-    
     if(!username || !pin) return alert("Please enter username and PIN");
     const virtualEmail = `${username}@billapp.local`;
 
     try {
         await signInWithEmailAndPassword(auth, virtualEmail, pin);
-        // Login Successful
     } catch (error) {
         if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
             try {
@@ -335,7 +310,7 @@ onAuthStateChanged(auth, async (user) => {
 
     if (user) {
         if(loginSec) loginSec.style.display = 'none';
-        if(profileSec) profileSec.style.display = 'flex'; // Profile UI 使用 flex
+        if(profileSec) profileSec.style.display = 'flex'; 
 
         const docSnap = await getDoc(doc(db, "users", user.uid));
         if (docSnap.exists()) {
@@ -366,7 +341,7 @@ window.saveProfile = async function() {
     try {
         await setDoc(doc(db, "users", user.uid), profileData);
         alert("Saved to Firebase Cloud! 🚀");
-        document.getElementById('settings-modal').classList.add('hidden'); // 儲存後自動關閉 Modal
+        document.getElementById('settings-modal').classList.add('hidden'); 
     } catch (error) {
         alert("Save Failed: " + error.message);
     }
