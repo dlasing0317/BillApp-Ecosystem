@@ -549,5 +549,70 @@ function updateItemizedMath() {
     tripMembersForSplit.forEach(member => { const amountNode = document.getElementById(`amount-${member.replace(/\s+/g, '-')}`); if (amountNode) { amountNode.textContent = `$${userTotals[member].toFixed(2)}`; } });
 }
 
+document.getElementById('btn-itemized-save').addEventListener('click', async () => {
+    const saveBtn = document.getElementById('btn-itemized-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+        if (!currentTripId) {
+            showNoticeModal('Trip Required', 'Itemized save currently works inside a trip only.');
+            return;
+        }
+
+        const assignedItems = parsedItemsData.filter(item => item.assignedTo && item.assignedTo.length > 0);
+        if (assignedItems.length === 0) {
+            showNoticeModal('No Assignments', 'Assign at least one item before confirming split.');
+            return;
+        }
+
+        const userTotals = {};
+        tripMembersForSplit.forEach(member => { userTotals[member] = 0; });
+        assignedItems.forEach(item => {
+            const splitPrice = item.price / item.assignedTo.length;
+            item.assignedTo.forEach(assignee => {
+                if (userTotals[assignee] !== undefined) userTotals[assignee] += splitPrice;
+            });
+        });
+
+        const splitMembers = Object.keys(userTotals).filter(member => userTotals[member] > 0);
+        const itemizedBreakdown = splitMembers.map(member => ({ member: member, amount: parseFloat(userTotals[member].toFixed(2)) }));
+        const itemizedItems = parsedItemsData.map(item => ({ name: item.name, price: item.price, assignedTo: item.assignedTo || [] }));
+
+        await addDoc(collection(db, `trips/${currentTripId}/expenses`), {
+            title: 'Itemized Expense',
+            amount: currentGrandTotal,
+            foreignAmount: currentForeignTotal,
+            foreignCurrency: currentCurrency,
+            exchangeRate: currentExchangeRate,
+            paidBy: getCurrentUser(),
+            splitBetween: splitMembers,
+            splitCount: splitMembers.length || 1,
+            isItemized: true,
+            itemizedBreakdown: itemizedBreakdown,
+            itemizedItems: itemizedItems,
+            createdAt: new Date().toISOString()
+        });
+
+        document.getElementById('itemized-modal').classList.add('hidden');
+        isItemizedMode = false;
+        updateScannerModeUI();
+        manualSubtotalInput.value = '';
+        manualTaxInput.value = '';
+        exactTipAmount = null;
+        autoResizeInput(manualSubtotalInput);
+        autoResizeInput(manualTaxInput);
+        calculateAndRender();
+        navigateTo('page-trip');
+        loadExpenses(currentTripId);
+        showToast('Itemized expense saved');
+    } catch (e) {
+        showNoticeModal('Error', 'Failed to save itemized split.');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Confirm Split';
+    }
+});
+
 document.getElementById('btn-itemized-cancel').addEventListener('click', () => { document.getElementById('itemized-modal').classList.add('hidden'); });
 document.getElementById('itemized-bg-overlay').addEventListener('click', () => { document.getElementById('itemized-modal').classList.add('hidden'); });
