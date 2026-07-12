@@ -3,10 +3,12 @@
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import { autoResizeInput, showNoticeModal, showConfirmModal, initConfirmModal, setupSwipeActions } from '../shared/core-ui.js';
 
 const firebaseConfig = { apiKey: "AIzaSyADViQdzsf1MTmsDnf_NiQp0eB-EPFsgxI", authDomain: "billapp-travel.firebaseapp.com", projectId: "billapp-travel", storageBucket: "billapp-travel.firebasestorage.app", messagingSenderId: "47415537906", appId: "1:47415537906:web:c401cdc2dd8bd22d10e06b" };
 const app = initializeApp(firebaseConfig); const db = getFirestore(app);
+const storage = getStorage(app);
 initConfirmModal();
 
 const getCurrentUser = () => { const name = localStorage.getItem('billapp_user_name'); return name ? name.trim() : 'Guest'; };
@@ -17,6 +19,17 @@ let currentTripMode = null; let currentTripId = null; let currentTripData = null
 let currentCurrency = "USD";
 let currentExchangeRate = 1.0000;
 let currentForeignTotal = 0.00;
+
+async function uploadScannedReceiptImage(tripId) {
+    if (!tripId || !lastScannedImageBlob) return null;
+    const now = Date.now();
+    const rand = Math.random().toString(36).slice(2, 8);
+    const path = `trips/${tripId}/receipts/receipt_${now}_${rand}.jpg`;
+    const imgRef = storageRef(storage, path);
+    await uploadBytes(imgRef, lastScannedImageBlob, { contentType: 'image/jpeg' });
+    const url = await getDownloadURL(imgRef);
+    return { receiptImageUrl: url, receiptImagePath: path };
+}
 
 function navigateTo(pageId) { document.querySelectorAll('.app-page').forEach(p => p.classList.remove('active')); document.getElementById(pageId).classList.add('active'); }
 function showToast(msg) { const toast = document.getElementById('toast-notification'); const toastMsg = document.getElementById('toast-message'); if(!toast) return; toastMsg.textContent = msg; toast.classList.remove('toast-hidden'); toast.classList.add('toast-visible'); setTimeout(() => { toast.classList.remove('toast-visible'); toast.classList.add('toast-hidden'); }, 4000); }
@@ -432,7 +445,8 @@ document.getElementById('btn-assignment-save').addEventListener('click', async (
     let splitArray = []; 
     splitNodes.forEach(n => splitArray.push(n.innerText));
     
-    try { 
+    try {
+        const receiptMeta = await uploadScannedReceiptImage(currentTripId);
         await addDoc(collection(db, `trips/${currentTripId}/expenses`), { 
             title: title, 
             amount: currentGrandTotal, 
@@ -442,12 +456,15 @@ document.getElementById('btn-assignment-save').addEventListener('click', async (
             paidBy: payerName, 
             splitBetween: splitArray, 
             splitCount: splitArray.length || 1, 
-            createdAt: new Date().toISOString() 
+            createdAt: new Date().toISOString(),
+            receiptImageUrl: receiptMeta ? receiptMeta.receiptImageUrl : null,
+            receiptImagePath: receiptMeta ? receiptMeta.receiptImagePath : null
         }); 
         assignmentModal.classList.add('hidden'); 
         manualSubtotalInput.value = ''; 
         manualTaxInput.value = ''; 
         exactTipAmount = null; 
+        lastScannedImageBlob = null;
         autoResizeInput(manualSubtotalInput); 
         autoResizeInput(manualTaxInput); 
         calculateAndRender(); 
@@ -583,6 +600,8 @@ document.getElementById('btn-itemized-save').addEventListener('click', async () 
         const itemizedBreakdown = splitMembers.map(member => ({ member: member, amount: parseFloat(userTotals[member].toFixed(2)) }));
         const itemizedItems = parsedItemsData.map(item => ({ name: item.name, price: item.price, assignedTo: item.assignedTo || [] }));
 
+        const receiptMeta = await uploadScannedReceiptImage(currentTripId);
+
         await addDoc(collection(db, `trips/${currentTripId}/expenses`), {
             title: 'Itemized Expense',
             amount: currentGrandTotal,
@@ -595,7 +614,9 @@ document.getElementById('btn-itemized-save').addEventListener('click', async () 
             isItemized: true,
             itemizedBreakdown: itemizedBreakdown,
             itemizedItems: itemizedItems,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            receiptImageUrl: receiptMeta ? receiptMeta.receiptImageUrl : null,
+            receiptImagePath: receiptMeta ? receiptMeta.receiptImagePath : null
         });
 
         document.getElementById('itemized-modal').classList.add('hidden');
@@ -604,6 +625,7 @@ document.getElementById('btn-itemized-save').addEventListener('click', async () 
         manualSubtotalInput.value = '';
         manualTaxInput.value = '';
         exactTipAmount = null;
+        lastScannedImageBlob = null;
         autoResizeInput(manualSubtotalInput);
         autoResizeInput(manualTaxInput);
         calculateAndRender();
