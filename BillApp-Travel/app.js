@@ -476,8 +476,15 @@ function renderAvatarDock() {
     
     // 🛠️ 修正 1：強制開啟橫向捲動 (Horizontal Scroll)，突破 6 個人限制
     dockContainer.style.display = 'flex';
+    dockContainer.style.width = '100%';
+    dockContainer.style.maxWidth = '100%';
+    dockContainer.style.justifyContent = 'flex-start';
     dockContainer.style.overflowX = 'auto';
+    dockContainer.style.overflowY = 'hidden';
     dockContainer.style.paddingBottom = '10px';
+    dockContainer.style.webkitOverflowScrolling = 'touch';
+    dockContainer.style.overscrollBehaviorX = 'contain';
+    dockContainer.style.touchAction = 'pan-x';
     dockContainer.style.scrollbarWidth = 'none'; // 隱藏 scrollbar 保持介面乾淨
 
     tripMembersForSplit.forEach(member => {

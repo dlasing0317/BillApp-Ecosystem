@@ -24,9 +24,9 @@
         .toast-visible { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) !important; }
         
         /* 🌟 V42.4 乾淨版 Paintbrush UI (個人總數喺頭像下面) */
-        .avatar-dock { display: flex; flex-direction: row; justify-content: center; gap: 20px; padding: 10px 5px 15px 5px; overflow-x: auto; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; scrollbar-width: none; }
+        .avatar-dock { display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; width: 100%; max-width: 100%; gap: 12px; padding: 10px 2px 14px 2px; overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: none; }
         .avatar-dock::-webkit-scrollbar { display: none; }
-        .dock-avatar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .dock-avatar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
         .dock-avatar { flex: 0 0 50px; width: 50px; height: 50px; border-radius: 50%; background: #2A2E38; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; opacity: 0.4; transition: all 0.2s; border: 2px solid transparent; cursor: pointer; }
         .dock-avatar.active-brush { opacity: 1; border: 2px solid white; transform: scale(1.1) translateY(-2px); box-shadow: 0 5px 15px rgba(125, 211, 252, 0.4); z-index: 2; background: var(--accent-blue); color: #000; }
         .avatar-amount { font-size: 0.85rem; color: var(--text-dim); font-weight: 600; transition: color 0.2s; letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
@@ -114,7 +114,7 @@
     <!-- 🌟 V42.4: 乾淨版 Itemized Split Modal (無 Summary Box) -->
     <div id="itemized-modal" class="modal-overlay hidden" style="z-index: 9999;">
         <div style="position: absolute; top:0; left:0; width:100%; height:100%;" id="itemized-bg-overlay"></div>
-        <div class="glass-modal-card" style="width: 95%; max-width: 450px; height: 85vh; padding: 20px; display: flex; flex-direction: column; z-index: 10;">
+        <div class="glass-modal-card" style="width: 95%; max-width: 450px; height: 85vh; padding: 20px; display: flex; flex-direction: column; align-items: stretch; overflow: hidden; z-index: 10;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <h3 class="modal-title" style="margin: 0; color: white;">Assign Items 🍽️</h3>
                 <button id="btn-add-manual-item" style="background: rgba(125, 211, 252, 0.15); border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 5px 12px; border-radius: 12px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">+ Add Item</button>
