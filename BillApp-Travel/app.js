@@ -20,6 +20,64 @@ let currentCurrency = "USD";
 let currentExchangeRate = 1.0000;
 let currentForeignTotal = 0.00;
 
+function formatMoney(val) {
+    const num = Number(val);
+    if (!Number.isFinite(num)) return '-';
+    return `$${num.toFixed(2)}`;
+}
+
+function formatDateTime(val) {
+    if (!val) return '-';
+    const d = new Date(val);
+    if (Number.isNaN(d.getTime())) return '-';
+    return d.toLocaleString();
+}
+
+function openExpenseDetailModal(data) {
+    const modal = document.getElementById('expense-detail-modal');
+    if (!modal || !data) return;
+
+    const titleNode = document.getElementById('expense-detail-title');
+    const dateNode = document.getElementById('expense-detail-date');
+    const paidByNode = document.getElementById('expense-detail-paid-by');
+    const splitWithNode = document.getElementById('expense-detail-split-with');
+    const subtotalNode = document.getElementById('expense-detail-subtotal');
+    const taxNode = document.getElementById('expense-detail-tax');
+    const tipNode = document.getElementById('expense-detail-tip');
+    const totalNode = document.getElementById('expense-detail-total');
+    const receiptImg = document.getElementById('expense-detail-receipt-img');
+    const receiptEmpty = document.getElementById('expense-detail-receipt-empty');
+    const receiptLink = document.getElementById('expense-detail-receipt-link');
+
+    if (titleNode) titleNode.textContent = data.title || 'Expense Details';
+    if (dateNode) dateNode.textContent = formatDateTime(data.createdAt);
+    if (paidByNode) paidByNode.textContent = data.paidBy || '-';
+
+    const splitArr = Array.isArray(data.splitBetween) ? data.splitBetween : [];
+    if (splitWithNode) splitWithNode.textContent = splitArr.length > 0 ? splitArr.join(', ') : `Split with ${data.splitCount || 0} ppl`;
+
+    if (subtotalNode) subtotalNode.textContent = formatMoney(data.subtotal);
+    if (taxNode) taxNode.textContent = formatMoney(data.tax);
+    if (tipNode) tipNode.textContent = formatMoney(data.tipAmount);
+    if (totalNode) totalNode.textContent = formatMoney(data.amount);
+
+    if (receiptImg && receiptEmpty && receiptLink) {
+        const hasReceipt = !!data.receiptImageUrl;
+        receiptImg.style.display = hasReceipt ? 'block' : 'none';
+        receiptEmpty.style.display = hasReceipt ? 'none' : 'block';
+        receiptLink.style.display = hasReceipt ? 'inline' : 'none';
+        receiptImg.src = hasReceipt ? data.receiptImageUrl : '';
+        receiptLink.href = hasReceipt ? data.receiptImageUrl : '#';
+    }
+
+    modal.classList.remove('hidden');
+}
+
+function closeExpenseDetailModal() {
+    const modal = document.getElementById('expense-detail-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
 async function uploadScannedReceiptImage(tripId, timeoutMs = 12000) {
     if (!tripId || !lastScannedImageBlob) return null;
     const now = Date.now();
@@ -100,6 +158,7 @@ async function loadExpenses(tripId) {
             } else { actionBg.innerHTML = `<div style="width:100%; display:flex; justify-content:center; align-items:center; color:var(--text-dim); font-size: 0.9rem;">Only ${data.paidBy} can edit this</div>`; }
             const newItem = document.createElement('div'); newItem.className = 'trip-card glass-box'; 
             newItem.innerHTML = `<div style="display:flex; justify-content: space-between; align-items: center;"><div style="color: white; font-weight: 600; font-size: 1.1rem;">${data.title}</div><div style="color: var(--accent-blue); font-size: 1.4rem; font-weight: 700;">$${data.amount.toFixed(2)}</div></div><div style="color: var(--text-dim); font-size: 0.85rem; margin-top: 5px;">Paid by ${data.paidBy} • Split with ${data.splitCount} ppl</div>`;
+            newItem.addEventListener('click', () => { if (newItem.getAttribute('data-swiping') === 'true') return; openExpenseDetailModal(data); });
             if (isTripOwner || isExpenseCreator) { setupSwipeActions(newItem); }
             wrapper.appendChild(actionBg); wrapper.appendChild(newItem); timeline.insertBefore(wrapper, timeline.firstChild);
         });
@@ -448,6 +507,9 @@ btnNext.addEventListener('click', async () => {
 });
 
 document.getElementById('btn-assignment-cancel').addEventListener('click', () => { assignmentModal.classList.add('hidden'); });
+document.getElementById('btn-expense-detail-close').addEventListener('click', closeExpenseDetailModal);
+document.getElementById('btn-expense-detail-close-top').addEventListener('click', closeExpenseDetailModal);
+document.getElementById('expense-detail-bg').addEventListener('click', closeExpenseDetailModal);
 
 // 🌟 將外幣資料 (foreignAmount, currency, rate) 完美寫入 Firestore 結構
 document.getElementById('btn-assignment-save').addEventListener('click', async () => {
@@ -469,6 +531,9 @@ document.getElementById('btn-assignment-save').addEventListener('click', async (
         await addDoc(collection(db, `trips/${currentTripId}/expenses`), { 
             title: title, 
             amount: currentGrandTotal, 
+            subtotal: scannedSubtotal,
+            tax: scannedTax,
+            tipAmount: exactTipAmount !== null ? exactTipAmount : (scannedSubtotal * (globalTipValue / 100)),
             foreignAmount: currentForeignTotal, 
             foreignCurrency: currentCurrency, 
             exchangeRate: currentExchangeRate, 
@@ -630,6 +695,9 @@ document.getElementById('btn-itemized-save').addEventListener('click', async () 
         await addDoc(collection(db, `trips/${currentTripId}/expenses`), {
             title: 'Itemized Expense',
             amount: currentGrandTotal,
+            subtotal: scannedSubtotal,
+            tax: scannedTax,
+            tipAmount: exactTipAmount !== null ? exactTipAmount : (scannedSubtotal * (globalTipValue / 100)),
             foreignAmount: currentForeignTotal,
             foreignCurrency: currentCurrency,
             exchangeRate: currentExchangeRate,

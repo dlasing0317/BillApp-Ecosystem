@@ -131,6 +131,55 @@
             </div>
         </div>
     </div>
+
+    <div id="expense-detail-modal" class="modal-overlay hidden" style="z-index: 9999;">
+        <div style="position: absolute; top:0; left:0; width:100%; height:100%;" id="expense-detail-bg"></div>
+        <div class="glass-modal-card" style="width: 92%; max-width: 460px; max-height: 86vh; padding: 20px; display: flex; flex-direction: column; align-items: stretch; z-index: 10;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px;">
+                <h3 class="modal-title" id="expense-detail-title" style="margin: 0; color: #fff; font-size: 1.25rem; line-height: 1.3;">Expense Details</h3>
+                <button id="btn-expense-detail-close-top" class="icon-btn" style="position: static; width: 38px; height: 38px; flex-shrink: 0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+            </div>
+
+            <div class="content-scroll" style="padding: 0; margin: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                <div class="glass-box" style="padding: 12px 14px;">
+                    <div style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 4px;">Date</div>
+                    <div id="expense-detail-date" style="color: #fff; font-size: 1rem;">-</div>
+                </div>
+
+                <div class="glass-box" style="padding: 12px 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 10px;">
+                        <div style="color: var(--text-dim); font-size: 0.8rem;">Receipt Copy</div>
+                        <a id="expense-detail-receipt-link" href="#" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); font-size: 0.85rem; text-decoration: none; display: none;">Open Receipt</a>
+                    </div>
+                    <img id="expense-detail-receipt-img" alt="Receipt" style="width: 100%; max-height: 220px; object-fit: contain; border-radius: 12px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); display: none;">
+                    <div id="expense-detail-receipt-empty" style="color: var(--text-dim); font-size: 0.9rem; text-align: center; padding: 24px 10px; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.12);">No receipt image attached</div>
+                </div>
+
+                <div class="glass-box" style="padding: 12px 14px;">
+                    <div style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 4px;">Paid By</div>
+                    <div id="expense-detail-paid-by" style="color: #fff; font-size: 1rem;">-</div>
+                </div>
+
+                <div class="glass-box" style="padding: 12px 14px;">
+                    <div style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 4px;">Split With</div>
+                    <div id="expense-detail-split-with" style="color: #fff; font-size: 1rem; line-height: 1.4;">-</div>
+                </div>
+
+                <div class="glass-box" style="padding: 12px 14px;">
+                    <div style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 8px;">Amount Details</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: var(--text-dim);">Subtotal</span><span id="expense-detail-subtotal" style="color: #fff;">-</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: var(--text-dim);">Tax</span><span id="expense-detail-tax" style="color: #fff;">-</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;"><span style="color: var(--text-dim);">Tip</span><span id="expense-detail-tip" style="color: #fff;">-</span></div>
+                    <div style="height: 1px; background: rgba(255,255,255,0.08); margin-bottom: 10px;"></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="color: #fff; font-weight: 700;">Total</span><span id="expense-detail-total" style="color: var(--accent-blue); font-weight: 700;">$0.00</span></div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; width: 100%; margin-top: 12px;">
+                <button class="modal-close-btn" id="btn-expense-detail-close" style="background: #21242D; color: #fff;">Close</button>
+            </div>
+        </div>
+    </div>
     
     <div id="basic-expense-modal" class="modal-overlay hidden"><div class="glass-modal-card" style="width: 90%; max-width: 400px; padding: 25px 20px;"><h3 class="modal-title" id="expense-modal-title" style="margin-bottom: 20px;">Add Expense</h3><div style="width: 100%; display: flex; flex-direction: column; gap: 15px; text-align: left;"><div class="modal-input-glass" style="padding: 15px;"><input type="text" id="basic-expense-title" placeholder="What did you pay for?" style="width: 100%; text-align: left; font-size: 1.1rem;"></div><div class="modal-input-glass" style="padding: 15px;"><span style="color: var(--text-dim); font-size: 1.2rem;">$</span><input type="number" id="basic-expense-amount" placeholder="0.00" step="0.01" style="width: 80%; text-align: right; font-size: 1.4rem; font-weight: bold;"></div><div><label style="color: var(--text-dim); font-size: 0.85rem; margin-left: 5px;">PAID BY</label><div class="avatar-scroll" id="basic-paid-by-container" style="margin-top: 5px;"></div></div></div><div style="display: flex; gap: 10px; width: 100%; margin-top: 25px;"><button class="modal-close-btn" id="btn-basic-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-basic-save" style="background: var(--accent-blue); color: #000;">Save</button></div></div></div>
     <div id="assignment-modal" class="modal-overlay hidden"><div class="glass-modal-card" style="max-width: 90%; width: 380px;"><h3 class="modal-title" style="margin-bottom: 20px;">Expense Details</h3><div style="width: 100%; display: flex; flex-direction: column; gap: 20px; text-align: left;"><div class="modal-input-glass" style="justify-content: flex-start; padding: 15px;"><input type="text" id="expense-title" placeholder="e.g. Ski Resort Dinner" style="width: 100%; text-align: left; font-size: 1.2rem;"></div><div><label style="color: var(--text-dim); font-size: 0.85rem; margin-left: 5px;">PAID BY</label><div class="avatar-scroll" id="paid-by-container"></div></div><div><label style="color: var(--text-dim); font-size: 0.85rem; margin-left: 5px;">SPLIT BETWEEN</label><div class="avatar-scroll" id="split-between-container"></div></div></div><div style="display: flex; gap: 10px; width: 100%; margin-top: 25px;"><button class="modal-close-btn" id="btn-assignment-cancel" style="background: #21242D; color: #fff;">Cancel</button><button class="modal-close-btn" id="btn-assignment-save" style="background: var(--accent-blue); color: #000;">Save</button></div></div></div>
