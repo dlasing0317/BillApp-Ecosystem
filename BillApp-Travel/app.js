@@ -20,15 +20,28 @@ let currentCurrency = "USD";
 let currentExchangeRate = 1.0000;
 let currentForeignTotal = 0.00;
 
-async function uploadScannedReceiptImage(tripId) {
+async function uploadScannedReceiptImage(tripId, timeoutMs = 12000) {
     if (!tripId || !lastScannedImageBlob) return null;
     const now = Date.now();
     const rand = Math.random().toString(36).slice(2, 8);
     const path = `trips/${tripId}/receipts/receipt_${now}_${rand}.jpg`;
     const imgRef = storageRef(storage, path);
-    await uploadBytes(imgRef, lastScannedImageBlob, { contentType: 'image/jpeg' });
-    const url = await getDownloadURL(imgRef);
-    return { receiptImageUrl: url, receiptImagePath: path };
+    const uploadPromise = (async () => {
+        await uploadBytes(imgRef, lastScannedImageBlob, { contentType: 'image/jpeg' });
+        const url = await getDownloadURL(imgRef);
+        return { receiptImageUrl: url, receiptImagePath: path };
+    })();
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Upload timeout')), timeoutMs);
+    });
+
+    try {
+        return await Promise.race([uploadPromise, timeoutPromise]);
+    } catch (err) {
+        console.warn('Receipt image upload skipped:', err);
+        showToast('Saved without image (upload timeout/error)');
+        return null;
+    }
 }
 
 function navigateTo(pageId) { document.querySelectorAll('.app-page').forEach(p => p.classList.remove('active')); document.getElementById(pageId).classList.add('active'); }
@@ -446,7 +459,13 @@ document.getElementById('btn-assignment-save').addEventListener('click', async (
     splitNodes.forEach(n => splitArray.push(n.innerText));
     
     try {
-        const receiptMeta = await uploadScannedReceiptImage(currentTripId);
+        let receiptMeta = null;
+        try {
+            receiptMeta = await uploadScannedReceiptImage(currentTripId);
+        } catch (err) {
+            console.warn('Receipt upload failed during itemized save:', err);
+            receiptMeta = null;
+        }
         await addDoc(collection(db, `trips/${currentTripId}/expenses`), { 
             title: title, 
             amount: currentGrandTotal, 
@@ -600,7 +619,13 @@ document.getElementById('btn-itemized-save').addEventListener('click', async () 
         const itemizedBreakdown = splitMembers.map(member => ({ member: member, amount: parseFloat(userTotals[member].toFixed(2)) }));
         const itemizedItems = parsedItemsData.map(item => ({ name: item.name, price: item.price, assignedTo: item.assignedTo || [] }));
 
-        const receiptMeta = await uploadScannedReceiptImage(currentTripId);
+        let receiptMeta = null;
+        try {
+            receiptMeta = await uploadScannedReceiptImage(currentTripId);
+        } catch (err) {
+            console.warn('Receipt upload failed during assignment save:', err);
+            receiptMeta = null;
+        }
 
         await addDoc(collection(db, `trips/${currentTripId}/expenses`), {
             title: 'Itemized Expense',
