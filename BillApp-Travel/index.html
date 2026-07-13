@@ -27,8 +27,8 @@
         .avatar-dock { display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; width: 100%; max-width: 100%; gap: 12px; padding: 10px 2px 14px 2px; overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: none; }
         .avatar-dock::-webkit-scrollbar { display: none; }
         .dock-avatar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
-        .dock-avatar { flex: 0 0 50px; width: 50px; height: 50px; border-radius: 50%; background: #2A2E38; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; opacity: 0.4; transition: all 0.2s; border: 2px solid transparent; cursor: pointer; }
-        .dock-avatar.active-brush { opacity: 1; border: 2px solid white; transform: scale(1.1) translateY(-2px); box-shadow: 0 5px 15px rgba(125, 211, 252, 0.4); z-index: 2; background: var(--accent-blue); color: #000; }
+        .dock-avatar { flex: 0 0 50px; width: 50px; height: 50px; border-radius: 50%; background: #2A2E38; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; opacity: 0.75; transition: all 0.2s; border: 2px solid transparent; cursor: pointer; }
+        .dock-avatar.active-brush { opacity: 1; border: 2px solid rgba(255,255,255,0.95); transform: scale(1.1) translateY(-2px); box-shadow: 0 6px 16px rgba(255,255,255,0.22); z-index: 2; }
         .avatar-amount { font-size: 0.85rem; color: var(--text-dim); font-weight: 600; transition: color 0.2s; letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
         .item-row { display: flex; flex-direction: row; justify-content: flex-start; align-items: center; background: rgba(0,0,0,0.25); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px; cursor: pointer; transition: background 0.2s; }
         .item-row:active { background: rgba(125, 211, 252, 0.1); }
