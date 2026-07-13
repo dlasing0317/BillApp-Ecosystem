@@ -3,7 +3,7 @@
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, getDoc, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import { autoResizeInput, showNoticeModal, showConfirmModal, initConfirmModal, setupSwipeActions } from '../shared/core-ui.js';
 
 const firebaseConfig = { apiKey: "AIzaSyADViQdzsf1MTmsDnf_NiQp0eB-EPFsgxI", authDomain: "billapp-travel.firebaseapp.com", projectId: "billapp-travel", storageBucket: "billapp-travel.firebasestorage.app", messagingSenderId: "47415537906", appId: "1:47415537906:web:c401cdc2dd8bd22d10e06b" };
@@ -31,6 +31,29 @@ function formatDateTime(val) {
     const d = new Date(val);
     if (Number.isNaN(d.getTime())) return '-';
     return d.toLocaleString();
+}
+
+const AVATAR_COLOR_PALETTE = [
+    { bg: '#7DD3FC', fg: '#04131F' },
+    { bg: '#FCA5A5', fg: '#2A0505' },
+    { bg: '#86EFAC', fg: '#03210F' },
+    { bg: '#FCD34D', fg: '#2B1E03' },
+    { bg: '#C4B5FD', fg: '#170A2E' },
+    { bg: '#FDBA74', fg: '#2B1404' },
+    { bg: '#A5F3FC', fg: '#062024' },
+    { bg: '#F9A8D4', fg: '#2E081B' },
+    { bg: '#D9F99D', fg: '#1A2604' },
+    { bg: '#BFDBFE', fg: '#051D38' },
+    { bg: '#E9D5FF', fg: '#1D0E31' },
+    { bg: '#FECACA', fg: '#2A0606' }
+];
+
+function getAvatarColors(name) {
+    const safe = String(name || '').trim().toLowerCase();
+    let hash = 0;
+    for (let i = 0; i < safe.length; i++) hash = ((hash << 5) - hash + safe.charCodeAt(i)) | 0;
+    const idx = Math.abs(hash) % AVATAR_COLOR_PALETTE.length;
+    return AVATAR_COLOR_PALETTE[idx];
 }
 
 function openExpenseDetailModal(data) {
@@ -153,8 +176,60 @@ async function loadExpenses(tripId) {
             const isExpenseCreator = data.paidBy.toLowerCase().replace(/\s+/g, '') === lowerMe;
             if (isTripOwner || isExpenseCreator) {
                 actionBg.innerHTML = `<div class="action-edit">Edit</div><div class="action-delete">Delete</div>`;
-                actionBg.querySelector('.action-delete').addEventListener('click', () => { const card = wrapper.querySelector('.trip-card'); card.classList.add('swiped-left'); showConfirmModal(`Delete "${data.title}"?`, async () => { try { await deleteDoc(doc(db, `trips/${tripId}/expenses`, docSnap.id)); loadExpenses(tripId); } catch(e) {} }); });
-                actionBg.querySelector('.action-edit').addEventListener('click', () => { editingExpenseId = docSnap.id; editingExpenseOriginal = { splitBetween: Array.isArray(data.splitBetween) ? [...data.splitBetween] : null, splitCount: data.splitCount, createdAt: data.createdAt || null }; document.getElementById('expense-modal-title').textContent = 'Edit Expense'; document.getElementById('basic-expense-title').value = data.title; document.getElementById('basic-expense-amount').value = data.amount; const originalPaidBy = document.getElementById('paid-by-container').innerHTML; document.getElementById('basic-paid-by-container').innerHTML = originalPaidBy; document.getElementById('basic-paid-by-container').querySelectorAll('.avatar-bubble').forEach(bubble => { if (bubble.textContent.trim() === data.paidBy) { bubble.classList.add('active'); } else { bubble.classList.remove('active'); } bubble.addEventListener('click', function() { document.getElementById('basic-paid-by-container').querySelectorAll('.avatar-bubble').forEach(x => x.classList.remove('active')); this.classList.add('active'); }); }); document.getElementById('basic-expense-modal').classList.remove('hidden'); });
+                actionBg.querySelector('.action-delete').addEventListener('click', () => { const card = wrapper.querySelector('.trip-card'); card.classList.add('swiped-left'); showConfirmModal(`Delete "${data.title}"?`, async () => { try { if (data.receiptImagePath) { try { await deleteObject(storageRef(storage, data.receiptImagePath)); } catch (storageErr) { console.warn('Receipt image delete skipped:', storageErr); } } await deleteDoc(doc(db, `trips/${tripId}/expenses`, docSnap.id)); loadExpenses(tripId); } catch(e) {} }); });
+                actionBg.querySelector('.action-edit').addEventListener('click', () => {
+                    if (data.isItemized && Array.isArray(data.itemizedItems) && data.itemizedItems.length > 0) {
+                        editingItemizedExpenseId = docSnap.id;
+                        editingItemizedExpenseOriginal = {
+                            title: data.title || 'Itemized Expense',
+                            paidBy: data.paidBy || getCurrentUser(),
+                            amount: Number(data.amount) || 0,
+                            subtotal: Number(data.subtotal),
+                            tax: Number(data.tax),
+                            tipAmount: Number(data.tipAmount),
+                            createdAt: data.createdAt || null,
+                            receiptImageUrl: data.receiptImageUrl || null,
+                            receiptImagePath: data.receiptImagePath || null,
+                            foreignAmount: data.foreignAmount,
+                            foreignCurrency: data.foreignCurrency,
+                            exchangeRate: data.exchangeRate
+                        };
+
+                        const membersFromTrip = currentTripData && Array.isArray(currentTripData.members) ? [...currentTripData.members] : [];
+                        const membersFromSplit = Array.isArray(data.splitBetween) ? data.splitBetween : [];
+                        const membersFromItems = data.itemizedItems.flatMap(item => Array.isArray(item.assignedTo) ? item.assignedTo : []);
+                        const mergedMembers = [...new Set([...membersFromTrip, ...membersFromSplit, ...membersFromItems])].filter(Boolean);
+                        tripMembersForSplit = mergedMembers.length > 0 ? mergedMembers : [getCurrentUser()];
+                        if (!tripMembersForSplit.includes(getCurrentUser())) tripMembersForSplit.unshift(getCurrentUser());
+
+                        currentBrushUser = tripMembersForSplit.includes(editingItemizedExpenseOriginal.paidBy) ? editingItemizedExpenseOriginal.paidBy : tripMembersForSplit[0];
+                        parsedItemsData = data.itemizedItems.map((item, idx) => ({
+                            id: item.id || `item_saved_${idx}`,
+                            name: item.name || `Item ${idx + 1}`,
+                            price: Number(item.price) || 0,
+                            assignedTo: Array.isArray(item.assignedTo) ? [...item.assignedTo] : []
+                        }));
+
+                        renderAvatarDock();
+                        renderScannedItems();
+                        updateItemizedMath();
+                        document.getElementById('itemized-modal').classList.remove('hidden');
+                        return;
+                    }
+
+                    editingExpenseId = docSnap.id;
+                    editingExpenseOriginal = { splitBetween: Array.isArray(data.splitBetween) ? [...data.splitBetween] : null, splitCount: data.splitCount, createdAt: data.createdAt || null };
+                    document.getElementById('expense-modal-title').textContent = 'Edit Expense';
+                    document.getElementById('basic-expense-title').value = data.title;
+                    document.getElementById('basic-expense-amount').value = data.amount;
+                    const originalPaidBy = document.getElementById('paid-by-container').innerHTML;
+                    document.getElementById('basic-paid-by-container').innerHTML = originalPaidBy;
+                    document.getElementById('basic-paid-by-container').querySelectorAll('.avatar-bubble').forEach(bubble => {
+                        if (bubble.textContent.trim() === data.paidBy) { bubble.classList.add('active'); } else { bubble.classList.remove('active'); }
+                        bubble.addEventListener('click', function() { document.getElementById('basic-paid-by-container').querySelectorAll('.avatar-bubble').forEach(x => x.classList.remove('active')); this.classList.add('active'); });
+                    });
+                    document.getElementById('basic-expense-modal').classList.remove('hidden');
+                });
             } else { actionBg.innerHTML = `<div style="width:100%; display:flex; justify-content:center; align-items:center; color:var(--text-dim); font-size: 0.9rem;">Only ${data.paidBy} can edit this</div>`; }
             const newItem = document.createElement('div'); newItem.className = 'trip-card glass-box'; 
             newItem.innerHTML = `<div style="display:flex; justify-content: space-between; align-items: center;"><div style="color: white; font-weight: 600; font-size: 1.1rem;">${data.title}</div><div style="color: var(--accent-blue); font-size: 1.4rem; font-weight: 700;">$${data.amount.toFixed(2)}</div></div><div style="color: var(--text-dim); font-size: 0.85rem; margin-top: 5px;">Paid by ${data.paidBy} • Split with ${data.splitCount} ppl</div>`;
@@ -566,6 +641,7 @@ autoResizeInput(manualSubtotalInput); autoResizeInput(manualTaxInput); calculate
 // 🌟 V54.0: PAINTBRUSH MODE LOGIC (支援 10+ 人橫向捲動 & 雙字母頭像)
 // ==========================================
 let parsedItemsData = []; let currentBrushUser = null; let tripMembersForSplit = [];
+let editingItemizedExpenseId = null; let editingItemizedExpenseOriginal = null;
 
 function initPaintbrushMode() {
     tripMembersForSplit = currentTripData ? currentTripData.members : [getCurrentUser(), 'Amy', 'Samuel'];
@@ -595,7 +671,7 @@ function renderAvatarDock() {
     tripMembersForSplit.forEach(member => {
         // 🛠️ 修正 2：抽取頭 2 個字母，例如 "Sherry" 變 "SH"
         const initial = member.substring(0, 2).toUpperCase(); 
-        const isMe = member === getCurrentUser();
+        const colorSet = getAvatarColors(member);
         
         const wrapper = document.createElement('div'); 
         wrapper.className = 'dock-avatar-wrapper';
@@ -608,14 +684,15 @@ function renderAvatarDock() {
         // 稍微縮小字體並收緊字距，讓雙字母完美居中
         avatarDiv.innerHTML = `<span style="font-size: 0.85em; letter-spacing: -0.5px;">${initial}</span>`;
         
-        if (member === currentBrushUser) { avatarDiv.style.background = isMe ? 'var(--accent-blue)' : '#E5E7EB'; avatarDiv.style.color = '#000'; }
+        avatarDiv.style.background = colorSet.bg;
+        avatarDiv.style.color = colorSet.fg;
         
         const amountDiv = document.createElement('div'); 
         amountDiv.className = 'avatar-amount'; 
         amountDiv.id = `amount-${member.replace(/\s+/g, '-')}`; 
         amountDiv.textContent = '$0.00';
         
-        if (member === currentBrushUser) { amountDiv.style.color = isMe ? 'var(--accent-blue)' : '#E5E7EB'; }
+        if (member === currentBrushUser) { amountDiv.style.color = colorSet.bg; amountDiv.style.fontWeight = '700'; }
         
         avatarDiv.addEventListener('click', () => { currentBrushUser = member; renderAvatarDock(); updateItemizedMath(); });
         
@@ -633,13 +710,14 @@ function renderScannedItems() {
             avatarsHTML = `<div style="width: 28px; height: 28px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.2);"></div>`; 
         } else {
             item.assignedTo.forEach((assignee, i) => { 
-                const isMe = assignee === getCurrentUser(); 
-                const bgCol = isMe ? 'var(--accent-blue)' : '#E5E7EB'; 
+                const colorSet = getAvatarColors(assignee);
+                const bgCol = colorSet.bg;
+                const fgCol = colorSet.fg;
                 const marginLeft = i === 0 ? '0' : '-10px'; 
                 
                 // 🛠️ 列表裡面的小頭像也同步改為 2 個字母
                 const initials = assignee.substring(0, 2).toUpperCase();
-                avatarsHTML += `<div class="mini-avatar" style="background: ${bgCol}; margin-left: ${marginLeft}; z-index: ${i}; font-size: 0.65em; letter-spacing: -0.5px; display:flex; justify-content:center; align-items:center;">${initials}</div>`; 
+                avatarsHTML += `<div class="mini-avatar" style="background: ${bgCol}; color: ${fgCol}; margin-left: ${marginLeft}; z-index: ${i}; font-size: 0.65em; letter-spacing: -0.5px; display:flex; justify-content:center; align-items:center;">${initials}</div>`; 
             });
         }
         itemRow.innerHTML = `<div style="pointer-events: none; display: flex; flex-direction: row; align-items: center; width: 45px; justify-content: flex-start;">${avatarsHTML}</div><div style="flex: 1; pointer-events: none; display: flex; flex-direction: row; justify-content: space-between; align-items: center;"><div style="color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">${item.name}</div><div style="color: var(--text-dim); font-size: 1rem; font-weight: 500;">$${item.price.toFixed(2)}</div></div>`;
@@ -683,6 +761,34 @@ document.getElementById('btn-itemized-save').addEventListener('click', async () 
         const splitMembers = Object.keys(userTotals).filter(member => userTotals[member] > 0);
         const itemizedBreakdown = splitMembers.map(member => ({ member: member, amount: parseFloat(userTotals[member].toFixed(2)) }));
         const itemizedItems = parsedItemsData.map(item => ({ name: item.name, price: item.price, assignedTo: item.assignedTo || [] }));
+
+        if (editingItemizedExpenseId) {
+            await updateDoc(doc(db, `trips/${currentTripId}/expenses`, editingItemizedExpenseId), {
+                title: editingItemizedExpenseOriginal?.title || 'Itemized Expense',
+                paidBy: editingItemizedExpenseOriginal?.paidBy || getCurrentUser(),
+                amount: Number.isFinite(editingItemizedExpenseOriginal?.amount) ? editingItemizedExpenseOriginal.amount : currentGrandTotal,
+                subtotal: Number.isFinite(editingItemizedExpenseOriginal?.subtotal) ? editingItemizedExpenseOriginal.subtotal : scannedSubtotal,
+                tax: Number.isFinite(editingItemizedExpenseOriginal?.tax) ? editingItemizedExpenseOriginal.tax : scannedTax,
+                tipAmount: Number.isFinite(editingItemizedExpenseOriginal?.tipAmount) ? editingItemizedExpenseOriginal.tipAmount : (exactTipAmount !== null ? exactTipAmount : (scannedSubtotal * (globalTipValue / 100))),
+                foreignAmount: editingItemizedExpenseOriginal?.foreignAmount,
+                foreignCurrency: editingItemizedExpenseOriginal?.foreignCurrency,
+                exchangeRate: editingItemizedExpenseOriginal?.exchangeRate,
+                splitBetween: splitMembers,
+                splitCount: splitMembers.length || 1,
+                isItemized: true,
+                itemizedBreakdown: itemizedBreakdown,
+                itemizedItems: itemizedItems,
+                receiptImageUrl: editingItemizedExpenseOriginal?.receiptImageUrl || null,
+                receiptImagePath: editingItemizedExpenseOriginal?.receiptImagePath || null
+            });
+
+            editingItemizedExpenseId = null;
+            editingItemizedExpenseOriginal = null;
+            document.getElementById('itemized-modal').classList.add('hidden');
+            loadExpenses(currentTripId);
+            showToast('Itemized assignment updated');
+            return;
+        }
 
         let receiptMeta = null;
         try {
@@ -733,5 +839,5 @@ document.getElementById('btn-itemized-save').addEventListener('click', async () 
     }
 });
 
-document.getElementById('btn-itemized-cancel').addEventListener('click', () => { document.getElementById('itemized-modal').classList.add('hidden'); });
-document.getElementById('itemized-bg-overlay').addEventListener('click', () => { document.getElementById('itemized-modal').classList.add('hidden'); });
+document.getElementById('btn-itemized-cancel').addEventListener('click', () => { editingItemizedExpenseId = null; editingItemizedExpenseOriginal = null; document.getElementById('itemized-modal').classList.add('hidden'); });
+document.getElementById('itemized-bg-overlay').addEventListener('click', () => { editingItemizedExpenseId = null; editingItemizedExpenseOriginal = null; document.getElementById('itemized-modal').classList.add('hidden'); });
